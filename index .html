@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Корпоративный портал СВОИ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React, ReactDOM, Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; margin: 0; overflow-x: hidden; }
+        
+        @keyframes driveFull {
+            0% { transform: translateX(-150%); }
+            100% { transform: translateX(1200%); }
+        }
+        .animate-drive-slow { animation: driveFull 45s linear infinite; }
+        
+        .bg-dashed-line {
+            background-image: linear-gradient(to right, #000 50%, transparent 50%);
+            background-size: 40px 2px;
+            height: 2px;
+            width: 100%;
+            opacity: 0.1;
+            position: absolute;
+            top: 50%;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .animate-shake { animation: shake 0.15s ease-in-out 0s 2; }
+
+        .slide-content::-webkit-scrollbar { width: 6px; }
+        .slide-content::-webkit-scrollbar-track { background: #f1f1f1; }
+        .slide-content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+        
+        .text-shadow { text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Анимации для авторизации */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(250, 204, 21, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+        }
+        .btn-primary { animation: pulse-ring 2s infinite; }
+        
+        /* Плавные переходы */
+        .fade-enter { opacity: 0; transform: translateY(20px); }
+        .fade-enter-active { opacity: 1; transform: translateY(0); transition: opacity 300ms, transform 300ms; }
+        .fade-exit { opacity: 1; }
+        .fade-exit-active { opacity: 0; transition: opacity 200ms; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // Компонент иконки с надежной инициализацией
+        const Icon = ({ name, size = 24, className = "" }) => {
+            useEffect(() => {
+                if (window.lucide) {
+                    // Небольшая задержка для гарантии загрузки DOM
+                    setTimeout(() => window.lucide.createIcons(), 50);
+                }
+            }, [name]);
+            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
+        };
+
+        const DEPARTMENTS = [
+            { id: 'tp_chats', title: 'ТП Чаты', icon: 'message-square', pin: '1111', description: 'Поддержка водителей в чатах' },
+            { id: 'tp_calls', title: 'ТП Звонки', icon: 'phone', pin: '2222', description: 'Голосовая поддержка' },
+            { id: 'op_chats', title: 'ОП Чаты', icon: 'users', pin: '3333', description: 'Продажи в мессенджерах' },
+            { id: 'op_requests', title: 'ОП Заявки', icon: 'file-text', pin: '4444', description: 'Обработка входящих лидов' }
+        ];
+
+        function App() {
+            const [view, setView] = useState('main');
+            const [selectedDept, setSelectedDept] = useState(null);
+            const [pinInput, setPinInput] = useState('');
+            const [error, setError] = useState('');
+            const [currentSlide, setCurrentSlide] = useState(1);
+            const [session, setSession] = useState(null);
+            const [lockoutUntil, setLockoutUntil] = useState(0);
+            const [isLoading, setIsLoading] = useState(true);
+            
+            const cheatSheetRef = useRef(null);
+            const inactivityTimer = useRef(null);
+            const totalSlides = 9;
+
+            // === ИНИЦИАЛИЗАЦИЯ СЕССИИ ===
+            useEffect(() => {
+                const initSession = () => {
+                    try {
+                        const saved = sessionStorage.getItem('svoi_session');
+                        if (saved) {
+                            const parsed = JSON.parse(saved);
+                            // Проверка таймаута (30 минут неактивности)
+                            if (Date.now() - parsed.timestamp < 30 * 60 * 1000) {
+                                setSession(parsed);
+                                // Если была сессия — сразу показываем контент
+                                if (parsed.deptId) {
+                                    const dept = DEPARTMENTS.find(d => d.id === parsed.deptId);
+                                    if (dept) {
+                                        setSelectedDept(dept);
+                                        setView('content');
+                                    }
+                                }
+                            } else {
+                                // Сессия истекла — очищаем
+                                sessionStorage.removeItem('svoi_session');
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Session init error:', e);
+                        sessionStorage.removeItem('svoi_session');
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                initSession();
+                
+                return () => {
+                    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+                };
+            }, []);
+
+            // === УПРАВЛЕНИЕ ТАЙМЕУТОМ НЕАКТИВНОСТИ ===
+            const resetInactivityTimer = () => {
+                if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+                if (!session) return;
+                
+                inactivityTimer.current = setTimeout(() => {
+                    handleLogout();
+                }, 30 * 60 * 1000); // 30 минут
+            };
+
+            // Сброс таймера при любом действии пользователя
+            useEffect(() => {
+                if (!session) return;
+                
+                const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+                const handler = () => resetInactivityTimer();
+                
+                events.forEach(event => window.addEventListener(event, handler));
+                resetInactivityTimer();
+                
+                return () => events.forEach(event => window.removeEventListener(event, handler));
+            }, [session]);
+
+            // === ПРОВЕРКА ДОСТУПА ===
+            useEffect(() => {
+                // Защита прямого доступа к контенту
+                if (view === 'content' && !session) {
+                    setView('auth');
+                    setError('⚠️ Сессия истекла. Пожалуйста, войдите снова.');
+                }
+                
+                // Сброс счётчика ошибок при успешной сессии
+                if (session) {
+                    sessionStorage.removeItem('svoi_pin_attempts');
+                }
+            }, [view, session]);
+
+            // === ФУНКЦИИ АВТОРИЗАЦИИ ===
+            const handleDeptSelect = (dept) => {
+                // Если уже авторизованы в этот отдел — сразу переходим
+                if (session?.deptId === dept.id) {
+                    setSelectedDept(dept);
+                    setView('content');
+                    setCurrentSlide(1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    return;
+                }
+                
+                setSelectedDept(dept);
+                setView('auth');
+                setPinInput('');
+                setError('');
+            };
+
+            const goBack = () => {
+                setView('main');
+                setSelectedDept(null);
+                setPinInput('');
+                setError('');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const handleLogin = (dept, pin) => {
+                // Проверка блокировки после неудачных попыток
+                if (Date.now() < lockoutUntil) {
+                    const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+                    setError(`🔒 Слишком много попыток. Попробуйте через ${remaining} сек.`);
+                    return false;
+                }
+
+                if (pin === dept.pin) {
+                    const newSession = {
+                        deptId: dept.id,
+                        deptTitle: dept.title,
+                        timestamp: Date.now(),
+                        token: btoa(`${dept.id}:${Date.now()}:${Math.random()}`)
+                    };
+                    
+                    sessionStorage.setItem('svoi_session', JSON.stringify(newSession));
+                    sessionStorage.removeItem('svoi_pin_attempts');
+                    
+                    setSession(newSession);
+                    setSelectedDept(dept);
+                    setView('content');
+                    setCurrentSlide(1);
+                    setError('');
+                    setLockoutUntil(0);
+                    setPinInput('');
+                    
+                    resetInactivityTimer();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    return true;
+                } else {
+                    // Логика защиты от брутфорса
+                    const attempts = parseInt(sessionStorage.getItem('svoi_pin_attempts') || '0') + 1;
+                    sessionStorage.setItem('svoi_pin_attempts', attempts.toString());
+                    
+                    if (attempts >= 3) {
+                        const lockTime = Date.now() + 60 * 1000; // Блокировка на 60 секунд
+                        setLockoutUntil(lockTime);
+                        setError('🔒 Слишком много попыток. Попробуйте через 1 минуту.');
+                    } else {
+                        setError(`❌ Неверный код. Осталось попыток: ${3 - attempts}`);
+                    }
+                    setPinInput('');
+                    return false;
+                }
+            };
+
+            const handlePinSubmit = (e) => {
+                e.preventDefault();
+                if (!selectedDept || pinInput.length !== 4) {
+                    setError('⚠️ Введите 4-значный код');
+                    return;
+                }
+                
+                const success = handleLogin(selectedDept, pinInput);
+                
+                if (!success) {
+                    // Визуальная обратная связь об ошибке
+                    const input = e.target.querySelector('input');
+                    if (input) {
+                        input.classList.add('animate-shake');
+                        setTimeout(() => input.classList.remove('animate-shake'), 300);
+                    }
+                }
+            };
+
+            const handleLogout = () => {
+                sessionStorage.removeItem('svoi_session');
+                sessionStorage.removeItem('svoi_pin_attempts');
+                setSession(null);
+                setSelectedDept(null);
+                setView('main');
+                setPinInput('');
+                setError('');
+                setLockoutUntil(0);
+                if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const scrollToCheatSheet = () => {
+                cheatSheetRef.current?.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            // === КОМПОНЕНТ ПРЕЗЕНТАЦИИ (без изменений структуры, только фиксы URL) ===
+            const Presentation = () => (
+                <div className="w-full max-w-6xl mx-auto mb-16 px-4">
+                    <div className="relative overflow-hidden bg-white rounded-[40px] shadow-2xl border border-gray-100 min-h-[650px] flex flex-col">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gray-100 z-50">
+                            <div className="h-full bg-yellow-400 transition-all duration-300 shadow-[0_0_10px_#facc15]" style={{ width: `${(currentSlide / totalSlides) * 100}%` }}></div>
+                        </div>
+
+                        <div className="flex-1 p-10 slide-content overflow-y-auto relative">
+                            {currentSlide === 1 && (
+                                <div className="flex flex-col items-center justify-center h-full text-center py-20 animate-in fade-in duration-500">
+                                    <div className="absolute top-0 right-0 w-1/2 h-full bg-yellow-400 skew-x-[-15deg] translate-x-32 z-0 opacity-10"></div>
+                                    <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-24 mb-8 relative z-10" />
+                                    <h1 className="text-6xl font-black italic uppercase tracking-tighter text-black relative z-10 leading-none">ГИД <span className="bg-black text-yellow-400 px-4 transform skew-x-[-5deg] inline-block">СВОИ</span><br/>ПОДДЕРЖКИ</h1>
+                                    <p className="mt-8 text-gray-500 font-bold italic uppercase tracking-[0.2em] relative z-10">Оперативность • Качество • Спокойствие</p>
+                                </div>
+                            )}
+
+                            {currentSlide === 2 && (
+                                <div className="animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-3xl font-black uppercase mb-8 border-l-[10px] border-yellow-400 pl-6 italic">📈 Твои показатели успеха</h2>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                        <table className="w-full text-sm rounded-2xl overflow-hidden shadow-xl border border-gray-100">
+                                            <tbody>
+                                                <tr className="bg-green-500 text-white font-black uppercase italic"><td className="p-4">100%+ — Идеальный результат</td></tr>
+                                                <tr className="bg-green-50 font-bold border-b border-gray-100"><td className="p-4">97% – 100% — Отлично</td></tr>
+                                                <tr className="bg-yellow-50 font-bold border-b border-gray-100"><td className="p-4">95% – 97% — Хорошо</td></tr>
+                                                <tr className="bg-orange-50 font-bold border-b border-gray-100"><td className="p-4">93% – 94% — Требует внимания</td></tr>
+                                                <tr className="bg-red-50 font-bold border-b border-gray-100"><td className="p-4">89% – 92% — Низкий показатель</td></tr>
+                                                <tr className="bg-red-600 text-white font-black"><td className="p-4 uppercase italic font-black">Ниже 89% — Критический уровень</td></tr>
+                                            </tbody>
+                                        </table>
+                                        <div className="space-y-4">
+                                            <div className="bg-gray-50 p-6 rounded-[32px] border-2 border-black font-bold italic shadow-inner">
+                                                <p className="text-yellow-500 uppercase font-black text-xs mb-2">Нормативы:</p>
+                                                <p>• 100+ чатов за смену (минимум)</p>
+                                                <p>• 5 минут — идеальное время ответа</p>
+                                                <p className="text-red-600 underline">• Тесты и тренинги — ОБЯЗАТЕЛЬНО</p>
+                                            </div>
+                                            <div className="bg-black text-white p-6 rounded-[32px] space-y-3 shadow-2xl">
+                                                <p className="text-yellow-400 font-black uppercase text-[10px] tracking-widest text-center mb-4 italic">Рабочие таблицы:</p>
+                                                <a href="https://docs.google.com/spreadsheets/d/1huOBRKU2MLql9hys-kBqznj7srys_2UwM0CFTdeW0vg/edit#gid=0" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>График работы</span> <Icon name="external-link" size={14}/></a>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <a href="https://docs.google.com/spreadsheets/d/1IMa9PdLiTkB6rwXilvM-wuNl6Zi3tcGf2xZt24ZI9mY/edit#gid=715446351" target="_blank" rel="noopener noreferrer" className="bg-white/5 p-2 rounded text-[10px] text-center border border-white/10 hover:border-yellow-400">1 ГР</a>
+                                                    <a href="#" className="bg-white/5 p-2 rounded text-[10px] text-center border border-white/10 hover:border-yellow-400">2 ГР</a>
+                                                    <a href="#" className="bg-white/5 p-2 rounded text-[10px] text-center border border-white/10 hover:border-yellow-400 uppercase font-bold">Ночь</a>
+                                                </div>
+                                                <a href="https://docs.google.com/spreadsheets/d/1ZZdz7yBQWfYDBG9Y6BB5KsNuFDSGH5oExO_ICm6VBPc/edit#gid=0" target="_blank" rel="noopener noreferrer" className="block bg-yellow-400 text-black text-center p-3 rounded-xl font-black uppercase text-xs shadow-lg shadow-yellow-400/20">Мотивация (оплата)</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentSlide === 3 && (
+                                <div className="animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-4xl font-black uppercase mb-12 border-l-[10px] border-yellow-400 pl-6 italic">🛠 Твой Арсенал</h2>
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                        <a href="https://svoicrm.ru/stream/?login=yes" target="_blank" rel="noopener noreferrer" className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
+                                            <div className="bg-black text-yellow-400 p-6 rounded-3xl mb-4 group-hover:rotate-12 transition-transform inline-block shadow-lg"><Icon name="message-square" size={32}/></div>
+                                            <h4 className="font-black italic uppercase text-black">Bitrix24</h4>
+                                            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-widest mt-2">Основная площадка</p>
+                                        </a>
+                                        <div className="bg-gray-50 p-8 rounded-[40px] opacity-30 text-center flex flex-col items-center justify-center">
+                                            <div className="bg-gray-400 text-white p-6 rounded-3xl mb-4 inline-block"><Icon name="shield-check" size={32}/></div>
+                                            <h4 className="font-black italic uppercase">DFS</h4>
+                                        </div>
+                                        <a href="https://svoi.motivity.ru/" target="_blank" rel="noopener noreferrer" className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
+                                            <div className="bg-black text-yellow-400 p-6 rounded-3xl mb-4 group-hover:-rotate-12 transition-transform inline-block shadow-lg"><Icon name="book-open" size={32}/></div>
+                                            <h4 className="font-black italic uppercase text-black">Motivity</h4>
+                                            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-widest mt-2">База знаний</p>
+                                        </a>
+                                        <div className="bg-gray-50 p-8 rounded-[40px] opacity-30 text-center flex flex-col items-center justify-center">
+                                            <div className="bg-gray-400 text-white p-6 rounded-3xl mb-4 inline-block"><Icon name="users" size={32}/></div>
+                                            <h4 className="font-black italic uppercase">Telegram</h4>
+                                        </div>
+                                    </div>
+                                    <div className="mt-16 bg-black text-yellow-400 p-5 rounded-full text-center font-black uppercase italic tracking-widest text-xs shadow-2xl">
+                                        🚀 Сомневаешься в ответе? Проверь в Базе Знаний SVOI!
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentSlide === 4 && (
+                                <div className="animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 italic uppercase">🧭 Маршрутизация</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 italic font-bold">
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-blue-50/20 hover:border-blue-500 transition-all group">
+                                            <h3 className="text-blue-600 uppercase font-black mb-4 tracking-tighter text-xl">Оставляем в ТП</h3>
+                                            <p className="text-sm leading-relaxed text-gray-600">Смена типа оплаты, вывод денег, лицензии и разрешения, проверка авто под тарифы парка.</p>
+                                        </div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-red-50/20 hover:border-red-500 transition-all">
+                                            <h3 className="text-red-600 uppercase font-black mb-4 tracking-tighter text-xl">Яндекс Поддержка</h3>
+                                            <p className="text-sm leading-relaxed text-gray-600">Неоплата заказов, жалобы на пассажиров (салон), ошибки Яндекс Про, изменения ФИО в приложении.</p>
+                                        </div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-purple-50/20 hover:border-purple-500 transition-all">
+                                            <h3 className="text-purple-600 uppercase font-black mb-4 tracking-tighter text-xl">РГ / Старшие</h3>
+                                            <p className="text-sm leading-relaxed text-gray-600">Повышение лимита до 30 000 ₽, серьезные конфликты, технические сбои и неординарные кейсы.</p>
+                                        </div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-orange-50/20 hover:border-orange-500 transition-all">
+                                            <h3 className="text-orange-600 uppercase font-black mb-4 tracking-tighter text-xl">Фин. отдел</h3>
+                                            <p className="text-sm leading-relaxed text-gray-600">Ошибки кнопки вывода, пополнение баланса, кейсы по антифроду и ручной перенос баланса.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentSlide === 5 && (
+                                <div className="flex flex-col items-center animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-4xl font-black uppercase mb-12 self-start border-l-[10px] border-yellow-400 pl-6 italic">💬 Культура общения</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full italic font-bold">
+                                        <div className="space-y-4">
+                                            <p className="text-green-500 font-black uppercase text-[10px] tracking-widest">МЫ ВСЕГДА:</p>
+                                            <div className="p-6 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm group hover:scale-[1.02] transition-all">• Пишем строго на «Вы»</div>
+                                            <div className="p-6 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm hover:scale-[1.02] transition-all">• Сохраняем деловой сухой тон</div>
+                                            <div className="p-6 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm hover:scale-[1.02] transition-all">• Проверяем орфографию (точки!)</div>
+                                        </div>
+                                        <div className="space-y-4 opacity-70">
+                                            <p className="text-red-500 font-black uppercase text-[10px] tracking-widest">КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:</p>
+                                            <div className="p-6 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg">• Смайлики / Метафоры / Юмор</div>
+                                            <div className="p-6 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg">• Закрывать чат без решения вопроса</div>
+                                            <div className="p-6 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg">• Грубить, спорить или оправдываться</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentSlide === 6 && (
+                                <div className="flex flex-col items-center justify-center h-full animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-4xl font-black uppercase mb-16 self-start border-l-[10px] border-yellow-400 pl-6 italic underline">📋 Режим смены</h2>
+                                    <div className="space-y-12 w-full max-w-xl font-black italic">
+                                        <div className="flex gap-10 items-center group"><div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl group-hover:scale-110 transition-all">08:59</div><div className="text-2xl">СТАРТ В BITRIX24</div></div>
+                                        <div className="flex gap-10 items-center group"><div className="bg-yellow-400 text-black p-6 rounded-[30px] w-32 text-center shadow-xl text-2xl uppercase group-hover:scale-110 transition-all">BREAK</div><div className="text-2xl leading-tight">ПЕРЕРЫВЫ <br/><span className="text-gray-400 text-sm">(2 по 30 мин + 3 по 10 мин)</span></div></div>
+                                        <div className="flex gap-10 items-center group"><div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl group-hover:scale-110 transition-all">21:00</div><div className="text-2xl">ФИНИШ И ПЕРЕДАЧА СМЕНЫ</div></div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentSlide === 7 && (
+                                <div className="animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 italic">👥 Твоя поддержка</h2>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 font-bold">
+                                        {[
+                                            { name: "Данил Брюхин", role: "РО Клиентский сервис", handle: "@d_breww", url: "https://t.me/d_breww", type: "gold" },
+                                            { name: "Ангелина Мешкова", role: "РО Обучения", handle: "@mOorgenstern", url: "https://t.me/mOorgenstern", type: "gold" },
+                                            { name: "Анастасия Поспелова", role: "Бизнес тренер", handle: "@the_aleksandrova", url: "https://t.me/the_aleksandrova", type: "white" },
+                                            { name: "Дарья Домрачева", role: "Бизнес тренер", handle: "@Kewassi", url: "https://t.me/Kewassi", type: "white" },
+                                            { name: "Ирина Коноваленко", role: "Бизнес тренер", handle: "@RiKokoko", url: "https://t.me/RiKokoko", type: "white" },
+                                            { name: "Дмитрий Черевко", role: "Руководитель группы", handle: "@dmitriy_svoi", url: "https://t.me/dmitriy_svoi", type: "gold" },
+                                            { name: "Дмитрий Щеглов", role: "Руководитель группы", handle: "@Shcheglov_98", url: "https://t.me/Shcheglov_98", type: "gold" }
+                                        ].map((p, i) => (
+                                            <div key={i} className={`p-6 rounded-[32px] border-b-8 shadow-sm transition-all hover:shadow-xl ${p.type === 'gold' ? 'border-yellow-400 bg-gray-50' : 'border-gray-100 bg-white'}`}>
+                                                <p className="font-black text-black uppercase italic text-sm leading-tight mb-1">{p.name}</p>
+                                                <p className="text-[8px] text-gray-400 uppercase mb-4 tracking-widest font-black leading-none">{p.role}</p>
+                                                <a href={p.url} target="_blank" rel="noopener noreferrer" className="bg-black text-yellow-400 px-4 py-2 rounded-xl text-[10px] font-black inline-block hover:bg-yellow-400 hover:text-black transition-all shadow-md">{p.handle}</a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentSlide === 8 && (
+                                <div className="animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 italic">🔗 База Знаний (Motivity)</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-bold italic">
+                                        {[
+                                            { name: 'Урок: Диспетчерская (DFS)', url: 'https://svoi.motivity.ru/study/lessons/55' },
+                                            { name: 'Урок: Bitrix24 Контакт-центр', url: 'https://svoi.motivity.ru/study/lessons/76' },
+                                            { name: 'Отработка негатива и возражений', url: 'https://svoi.motivity.ru/study/lessons/312' },
+                                            { name: 'Финансовый регламент выплат', url: 'https://svoi.motivity.ru/library/file/377' },
+                                            { name: 'Самозанятость и ИП в такси', url: 'https://svoi.motivity.ru/study/lessons/169' },
+                                            { name: 'Тренажер: Интерфейс Яндекс Про', url: 'https://svoi.motivity.ru/study/lessons/116' },
+                                            { name: 'Смена автомобиля в парке', url: 'https://svoi.motivity.ru/library/file/263' },
+                                            { name: 'Классификатор: Типы обращений', url: 'https://svoi.motivity.ru/study/lessons/113' }
+                                        ].map((item, idx) => (
+                                            <a key={idx} href={item.url} target="_blank" rel="noopener noreferrer" className="p-5 bg-gray-50 rounded-[24px] border-2 border-gray-50 hover:border-yellow-400 hover:bg-white flex justify-between group transition-all shadow-sm">
+                                                <span className="text-black group-hover:font-black">{item.name}</span> <Icon name="external-link" size={16} className="text-yellow-500" />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentSlide === 9 && (
+                                <div className="flex flex-col items-center justify-center h-full text-center bg-yellow-400 rounded-[40px] p-10 shadow-2xl relative overflow-hidden animate-in zoom-in duration-500">
+                                    <Icon name="shield-check" size={120} className="mb-10 text-black animate-bounce" />
+                                    <h2 className="text-7xl font-black uppercase italic leading-[0.8] mb-8 tracking-tighter">ТЫ ГОТОВ <br/><span className="text-white drop-shadow-lg">К РАБОТЕ!</span></h2>
+                                    <p className="text-2xl max-w-2xl font-black italic mb-12 uppercase tracking-tighter text-black/60">Обучение завершено. Закрепи знания с помощью шпаргалки таксопарка ниже.</p>
+                                    <button 
+                                        onClick={scrollToCheatSheet}
+                                        className="bg-black text-yellow-400 px-20 py-8 rounded-[30px] font-black uppercase italic tracking-[0.2em] hover:scale-105 transition-all shadow-[0_25px_60px_rgba(0,0,0,0.5)] flex items-center gap-6 text-2xl active:scale-95"
+                                    >
+                                        Открыть шпаргалку <Icon name="chevron-down" size={40} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Кнопки переключения */}
+                        <div className="p-8 flex justify-end gap-5 bg-gray-50/50 relative z-50">
+                            <button onClick={() => setCurrentSlide(p => Math.max(1, p-1))} disabled={currentSlide === 1} className="p-6 rounded-[30px] bg-white border border-gray-200 hover:bg-black hover:text-yellow-400 disabled:opacity-10 transition-all shadow-xl"><Icon name="chevron-left" size={40}/></button>
+                            <button onClick={() => setCurrentSlide(p => Math.min(totalSlides, p+1))} disabled={currentSlide === totalSlides} className="p-6 rounded-[30px] bg-yellow-400 text-black hover:scale-110 shadow-2xl font-black transition-all border-4 border-black active:scale-90"><Icon name="chevron-right" size={40}/></button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // === ЗАЩИТА ОТ ПРЯМОГО ДОСТУПА ===
+            if (view === 'content' && !session) {
+                return (
+                    <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center">
+                        <div className="bg-white p-10 rounded-[40px] text-center max-w-md mx-4 animate-in zoom-in duration-300 shadow-2xl border-4 border-yellow-400">
+                            <Icon name="lock" size={60} className="mx-auto mb-6 text-yellow-400" />
+                            <h3 className="text-2xl font-black uppercase italic mb-4">Доступ запрещён</h3>
+                            <p className="text-gray-500 mb-8 font-bold">{error || 'Необходима авторизация'}</p>
+                            <button 
+                                onClick={() => { setView('auth'); setError(''); }}
+                                className="bg-yellow-400 text-black px-8 py-3 rounded-2xl font-black uppercase italic hover:scale-105 transition-all btn-primary"
+                            >
+                                Войти в систему
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // === LOADING STATE ===
+            if (isLoading) {
+                return (
+                    <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center">
+                        <div className="text-center">
+                            <Icon name="loader-2" size={48} className="mx-auto mb-4 text-yellow-400 animate-spin" />
+                            <p className="font-black uppercase italic text-gray-400">Загрузка...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-[#f3f4f6] overflow-x-hidden selection:bg-yellow-400 selection:text-black">
+                    {/* Header с авторизацией */}
+                    <header className="bg-[#1a1a1a] p-6 border-b-4 border-yellow-400 flex justify-between items-center sticky top-0 z-[100] shadow-2xl">
+                        <div className="flex items-center gap-6">
+                            <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-12" />
+                            <div className="hidden lg:block text-white/40 font-black italic uppercase text-[9px] tracking-widest leading-tight">Сертифицированный партнер <br/>Яндекс.Такси с 2011 года</div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            {/* Индикатор активной сессии */}
+                            {session && (
+                                <div className="hidden md:flex items-center gap-3 text-yellow-400/80 text-[10px] font-black uppercase tracking-widest bg-black/30 px-4 py-2 rounded-full border border-yellow-400/30">
+                                    <Icon name="shield-check" size={12} className="animate-pulse" />
+                                    {session.deptTitle}
+                                </div>
+                            )}
+                            
+                            {view !== 'main' && (
+                                <div className="flex gap-3">
+                                    {session && (
+                                        <button 
+                                            onClick={handleLogout}
+                                            className="bg-red-500/20 text-red-400 px-4 py-2 rounded-xl font-black uppercase italic text-[10px] hover:bg-red-500/40 transition-all border border-red-500/30 flex items-center gap-2"
+                                            title="Выйти из системы"
+                                        >
+                                            <Icon name="log-out" size={12} /> Выход
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={goBack} 
+                                        className="bg-yellow-400 text-black px-6 py-2 rounded-xl font-black uppercase italic text-[10px] border-2 border-black hover:scale-105 transition-all shadow-lg"
+                                    >
+                                        На главную
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </header>
+
+                    {/* Дорога и Медленная Машина */}
+                    <div className="relative h-24 bg-white border-b-8 border-black overflow-hidden shadow-inner">
+                        <div className="bg-dashed-line"></div>
+                        <div className="absolute top-1/2 -translate-y-1/2 animate-drive-slow flex items-center gap-5">
+                            <div className="bg-black text-yellow-400 px-8 py-3 rounded-[24px] font-black italic uppercase text-sm flex items-center gap-4 shadow-2xl border-4 border-yellow-400/10">
+                                <Icon name="car" size={24} className="animate-bounce" /> СВОИ ТАКСИ
+                            </div>
+                            <div className="w-[600px] h-2 bg-black/5 rounded-full"></div>
+                        </div>
+                    </div>
+
+                    {view === 'main' && (
+                        <main className="max-w-7xl mx-auto py-24 px-8 animate-in fade-in duration-700">
+                            <div className="flex flex-col md:flex-row items-end justify-between gap-10 mb-24 border-b-8 border-black pb-12">
+                                <div className="max-w-2xl relative">
+                                    <div className="absolute -top-12 -left-8 bg-black text-yellow-400 px-6 py-2 rounded-full font-black text-[12px] uppercase italic tracking-[0.3em] shadow-2xl">Corporate Portal</div>
+                                    <h1 className="text-8xl md:text-[140px] font-black italic tracking-tighter uppercase leading-[0.75] text-black text-shadow">БУДЬ <br/><span className="text-yellow-400 bg-black px-6 inline-block transform -skew-x-6">СВОИМ</span> <br/>В КОМАНДЕ.</h1>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-gray-400 font-black italic uppercase text-sm tracking-[0.2em] leading-tight">Официальная система <br/>обучения и поддержки</p>
+                                    <div className="w-40 h-3 bg-yellow-400 mt-4 ml-auto rounded-full"></div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                {DEPARTMENTS.map(dept => (
+                                    <button key={dept.id} onClick={() => handleDeptSelect(dept)} className="group bg-white p-14 rounded-[70px] shadow-2xl border-b-[16px] border-gray-100 hover:border-yellow-400 transition-all hover:-translate-y-6 text-center overflow-hidden relative border border-gray-50">
+                                        <div className="bg-black text-yellow-400 w-20 h-20 rounded-[30px] flex items-center justify-center mx-auto mb-10 shadow-2xl group-hover:rotate-12 transition-transform">
+                                            <Icon name={dept.icon} size={40} />
+                                        </div>
+                                        <h3 className="text-3xl font-black italic uppercase mb-4 tracking-tighter text-black leading-none">{dept.title}</h3>
+                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest italic leading-relaxed">{dept.description}</p>
+                                        <div className="absolute -bottom-10 -right-10 text-black/[0.02] rotate-12 pointer-events-none"><Icon name={dept.icon} size={150} /></div>
+                                    </button>
+                                ))}
+                            </div>
+                        </main>
+                    )}
+
+                    {view === 'auth' && (
+                        <main className="max-w-xl mx-auto py-32 px-8 animate-in zoom-in-95 duration-300">
+                            <div className="bg-white p-16 rounded-[80px] shadow-2xl text-center border-[12px] border-black relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-400 -translate-y-20 translate-x-20 rotate-45 opacity-50"></div>
+                                <Icon name="lock" size={80} className="mx-auto mb-12 text-black" />
+                                <h2 className="text-4xl font-black uppercase italic mb-3 tracking-tighter text-black">Вход в сектор</h2>
+                                <p className="text-gray-400 mb-8 italic text-xl font-black uppercase tracking-[0.2em] underline decoration-yellow-400 decoration-[12px]">{selectedDept?.title}</p>
+                                
+                                {/* Индикатор блокировки */}
+                                {lockoutUntil > Date.now() && (
+                                    <div className="mb-6 p-4 bg-red-50 border-2 border-red-400 rounded-2xl">
+                                        <p className="text-red-600 font-black uppercase text-xs flex items-center justify-center gap-2">
+                                            <Icon name="alert-circle" size={16} />
+                                            Защита от подбора: {Math.ceil((lockoutUntil - Date.now()) / 1000)} сек.
+                                        </p>
+                                    </div>
+                                )}
+                                
+                                <form onSubmit={handlePinSubmit} className="space-y-8">
+                                    <div className="relative">
+                                        <input 
+                                            type="password" 
+                                            maxLength="4" 
+                                            placeholder="••••" 
+                                            autoFocus 
+                                            value={pinInput} 
+                                            onChange={e => {
+                                                setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4));
+                                                if (error) setError('');
+                                            }}
+                                            disabled={lockoutUntil > Date.now()}
+                                            className="w-full bg-gray-100 text-center text-7xl py-10 rounded-[45px] border-4 border-gray-50 focus:border-yellow-400 transition-all font-black shadow-inner disabled:opacity-50 disabled:cursor-not-allowed" 
+                                        />
+                                        {/* Визуальные точки для ввода */}
+                                        <div className="absolute inset-0 flex items-center justify-center gap-4 pointer-events-none">
+                                            {[0,1,2,3].map(i => (
+                                                <span key={i} className={`w-4 h-4 rounded-full transition-all ${pinInput.length > i ? 'bg-black scale-100' : 'bg-gray-300 scale-75'}`}></span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    
+                                    {error && (
+                                        <p className={`font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 ${error.includes('Слишком много') ? 'text-red-600' : 'text-orange-500'}`}>
+                                            <Icon name={error.includes('Слишком много') ? 'alert-triangle' : 'x-circle'} size={14} />
+                                            {error}
+                                        </p>
+                                    )}
+                                    
+                                    <button 
+                                        type="submit" 
+                                        disabled={pinInput.length !== 4 || lockoutUntil > Date.now()}
+                                        className="w-full bg-yellow-400 text-black py-8 rounded-[45px] font-black uppercase italic text-3xl shadow-2xl hover:scale-105 transition-all shadow-yellow-400/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 btn-primary"
+                                    >
+                                        {lockoutUntil > Date.now() ? '⏳ Подождите...' : 'Войти'}
+                                    </button>
+                                </form>
+                                
+                                {/* Подсказка для демо */}
+                                <p className="mt-8 text-[10px] text-gray-300 font-bold uppercase tracking-widest">
+                                    Demo PIN: <span className="text-yellow-400 bg-black px-2 rounded">1111</span> • <span className="text-yellow-400 bg-black px-2 rounded">2222</span> • <span className="text-yellow-400 bg-black px-2 rounded">3333</span> • <span className="text-yellow-400 bg-black px-2 rounded">4444</span>
+                                </p>
+                            </div>
+                        </main>
+                    )}
+
+                    {view === 'content' && session && (
+                        <main className="animate-in slide-in-from-bottom-10 duration-1000">
+                            <div className="bg-black text-yellow-400 py-5 text-center sticky top-[95px] z-[90] shadow-2xl font-black text-[11px] uppercase tracking-[0.5em] italic flex items-center justify-center gap-4">
+                                <Icon name="shield-check" size={14} className="animate-pulse" />
+                                Access Level: Restricted • Sector: {session.deptTitle} • Taxi Svoi Ecosystem
+                                <button onClick={handleLogout} className="ml-4 text-red-400 hover:text-red-300 transition-colors" title="Выйти">
+                                    <Icon name="log-out" size={14} />
+                                </button>
+                            </div>
+                            <div className="py-24">
+                                <Presentation />
+                                <div ref={cheatSheetRef} className="w-full max-w-6xl mx-auto px-4 pb-40 text-black">
+                                    <h2 className="text-7xl md:text-[100px] font-black italic uppercase tracking-tighter mb-24 text-center leading-none">БАЗА <br/><span className="text-yellow-400 bg-black px-6 transform skew-x-[-5deg] inline-block">ЗНАНИЙ</span> СВОИ</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                                        <div className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-50 hover:-translate-y-4 transition-all">
+                                            <Icon name="credit-card" size={70} className="text-yellow-400 mb-10" />
+                                            <h3 className="text-3xl font-black uppercase italic mb-6">Тарифы</h3>
+                                            <p className="text-gray-400 font-black uppercase italic text-xs tracking-widest border-b-8 border-dashed border-yellow-400 pb-4 leading-relaxed">Ожидаем актуальную <br/>информацию для заполнения...</p>
+                                        </div>
+                                        <div className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-50 hover:-translate-y-4 transition-all">
+                                            <Icon name="car" size={70} className="text-yellow-400 mb-10" />
+                                            <h3 className="text-3xl font-black uppercase italic mb-6">Цвета и ГОСТ</h3>
+                                            <p className="text-gray-400 font-black uppercase italic text-xs tracking-widest border-b-8 border-dashed border-yellow-400 pb-4 leading-relaxed">Ожидаем актуальную <br/>информацию для заполнения...</p>
+                                        </div>
+                                        <div className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-50 hover:-translate-y-4 transition-all">
+                                            <Icon name="briefcase" size={70} className="text-yellow-400 mb-10" />
+                                            <h3 className="text-3xl font-black uppercase italic mb-6">Юр. база</h3>
+                                            <p className="text-gray-400 font-black uppercase italic text-xs tracking-widest border-b-8 border-dashed border-yellow-400 pb-4 leading-relaxed">Ожидаем актуальную <br/>информацию для заполнения...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </main>
+                    )}
+
+                    <footer className="bg-[#1a1a1a] py-32 text-center border-t-8 border-yellow-400">
+                        <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-16 mx-auto opacity-20 mb-10" />
+                        <p className="text-gray-600 text-xs font-black uppercase tracking-[0.8em] italic mb-4">Taxi Svoi Corporate Portal</p>
+                        <p className="text-gray-800 text-[10px] font-black uppercase">© 2024 МЫ ВСЕГДА РЯДОМ</p>
+                        
+                        {/* Индикатор сессии в футере для мобильных */}
+                        {session && (
+                            <div className="md:hidden mt-8 text-yellow-400/60 text-[9px] font-black uppercase tracking-widest">
+                                <Icon name="shield-check" size={10} className="inline mr-1" />
+                                {session.deptTitle} • <button onClick={handleLogout} className="underline hover:text-yellow-400">Выйти</button>
+                            </div>
+                        )}
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
