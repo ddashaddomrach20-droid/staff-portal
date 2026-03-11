@@ -14,7 +14,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; margin: 0; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; margin: 0; overflow-x: hidden; scroll-behavior: smooth; }
         @keyframes driveFull {
             0% { transform: translateX(-150%); }
             100% { transform: translateX(1200%); }
@@ -38,10 +38,12 @@
         .slide-content::-webkit-scrollbar-track { background: #f1f1f1; }
         .slide-content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
         .text-shadow { text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Анимация бегущей строки */
         .animate-marquee {
             display: inline-block;
             white-space: nowrap;
-            animation: marquee 40s linear infinite;
+            animation: marquee 20s linear infinite;
         }
         @keyframes marquee {
             0% { transform: translateX(100%); }
@@ -78,25 +80,37 @@
 
             const handleDeptSelect = (dept) => { setSelectedDept(dept); setView('auth'); setPinInput(''); setError(false); };
             const goBack = () => { setView('main'); setSelectedDept(null); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+            
             const handlePinSubmit = (e) => {
                 e.preventDefault();
                 if (pinInput === selectedDept.pin) { setView('content'); setCurrentSlide(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }
                 else { setError(true); setPinInput(''); }
             };
 
-            const scrollToCheatSheet = () => {
-                cheatSheetRef.current?.scrollIntoView({ behavior: 'smooth' });
+            const scrollToSection = (id) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const offset = 120; // Чтобы заголовок не прятался под липкий хедер
+                    const bodyRect = document.body.getBoundingClientRect().top;
+                    const elementRect = element.getBoundingClientRect().top;
+                    const elementPosition = elementRect - bodyRect;
+                    const offsetPosition = elementPosition - offset;
+
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: "smooth"
+                    });
+                }
             };
 
             const Presentation = () => (
-                <div className="w-full max-w-6xl mx-auto mb-16 px-4">
-                    <div className="relative overflow-hidden bg-white rounded-[40px] shadow-2xl border border-gray-100 min-h-[650px] flex flex-col font-black italic">
+                <div className="w-full max-w-6xl mx-auto mb-16 px-4 font-black italic">
+                    <div className="relative overflow-hidden bg-white rounded-[40px] shadow-2xl border border-gray-100 min-h-[720px] flex flex-col">
                         <div className="absolute top-0 left-0 w-full h-2 bg-gray-100 z-50">
-                            <div className="h-full bg-yellow-400 transition-all duration-300" style={{ width: `${(currentSlide / totalSlides) * 100}%` }}></div>
+                            <div className="h-full bg-yellow-400 transition-all duration-300 shadow-[0_0_10px_#facc15]" style={{ width: `${(currentSlide / totalSlides) * 100}%` }}></div>
                         </div>
 
                         <div className="flex-1 p-10 slide-content overflow-y-auto relative">
-                            {/* СЛАЙД 1: ЛОГОТИП */}
                             {currentSlide === 1 && (
                                 <div className="flex flex-col items-center justify-center h-full text-center py-20 animate-in fade-in duration-500">
                                     <div className="absolute top-0 right-0 w-1/2 h-full bg-yellow-400 skew-x-[-15deg] translate-x-32 z-0 opacity-10"></div>
@@ -106,34 +120,33 @@
                                 </div>
                             )}
 
-                            {/* СЛАЙД 2: KPI */}
                             {currentSlide === 2 && (
                                 <div className="animate-in slide-in-from-right duration-300">
                                     <h2 className="text-3xl font-black uppercase mb-8 border-l-[10px] border-yellow-400 pl-6 underline decoration-black">📈 Твои показатели успеха</h2>
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                        <table className="w-full text-sm rounded-2xl overflow-hidden shadow-xl border border-gray-100">
+                                        <table className="w-full text-sm rounded-2xl overflow-hidden shadow-xl border border-gray-100 font-black">
                                             <tbody>
                                                 <tr className="bg-green-500 text-white uppercase"><td className="p-4">100%+ — Мастер</td></tr>
                                                 <tr className="bg-green-50"><td className="p-4 border-b border-gray-100 text-green-800 underline">97% – 100% — Отлично</td></tr>
                                                 <tr className="bg-yellow-50"><td className="p-4 border-b border-gray-100 text-yellow-700 underline">95% – 97% — Хорошо</td></tr>
-                                                <tr className="bg-orange-50 font-bold"><td className="p-4 border-b border-gray-100">93% – 94% — Внимание</td></tr>
-                                                <tr className="bg-red-600 text-white uppercase"><td className="p-4">Ниже 89% — Критично</td></tr>
+                                                <tr className="bg-orange-50 font-black"><td className="p-4 border-b border-gray-100">93% – 94% — Внимание</td></tr>
+                                                <tr className="bg-red-600 text-white uppercase"><td className="p-4 font-black italic">Ниже 89% — Критично</td></tr>
                                             </tbody>
                                         </table>
                                         <div className="space-y-4">
-                                            <div className="bg-gray-50 p-6 rounded-[32px] border-2 border-black shadow-inner uppercase text-sm">
-                                                <p className="text-yellow-500 font-black text-xs mb-2 underline">Нормативы:</p>
-                                                <p>• 100+ чатов за смену</p><p>• 5 минут — идеальный ответ</p><p className="text-red-600 underline mt-2">• Тесты — ОБЯЗАТЕЛЬНО</p>
+                                            <div className="bg-gray-50 p-6 rounded-[32px] border-2 border-black shadow-inner uppercase text-sm font-black italic">
+                                                <p className="text-yellow-500 mb-2 underline">Нормативы:</p>
+                                                <p>• 100+ чатов за смену</p><p>• 5 минут — идеальный ответ</p><p className="text-red-600 underline mt-2 font-black italic">• Тесты — ОБЯЗАТЕЛЬНО</p>
                                             </div>
-                                            <div className="bg-black text-white p-6 rounded-[32px] space-y-3 shadow-2xl">
+                                            <div className="bg-black text-white p-6 rounded-[32px] space-y-3 shadow-2xl font-black italic">
                                                 <p className="text-yellow-400 uppercase text-[10px] tracking-widest text-center mb-4">Рабочие таблицы:</p>
                                                 <a href="https://docs.google.com/spreadsheets/d/1huOBRKU2MLql9hys-kBqznj7srys_2UwM0CFTdeW0vg/edit#gid=0" target="_blank" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>График работы</span> <Icon name="external-link" size={14}/></a>
                                                 <div className="grid grid-cols-3 gap-2">
-                                                    <a href="https://docs.google.com/spreadsheets/d/1IMa9PdLiTkB6rwXilvM-wuNl6Zi3tcGf2xZt24ZI9mY/edit#gid=715446351" target="_blank" className="bg-white/5 p-2 rounded text-[10px] text-center border border-white/10 hover:border-yellow-400">1 ГР</a>
-                                                    <a href="https://docs.google.com/spreadsheets/d/1PvbypdcAN0Nqnb5mt4M6eARiBkXu7ARf_WJsn5bRtRk/edit#gid=1362933848" target="_blank" className="bg-white/5 p-2 rounded text-[10px] text-center border border-white/10 hover:border-yellow-400">2 ГР</a>
-                                                    <a href="https://docs.google.com/spreadsheets/d/1wdhc0l2puo9KZnGBX-hr7wyKZeCOCNuK0hUXySU4JcA/edit#gid=627104501" target="_blank" className="bg-white/5 p-2 rounded text-[10px] text-center border border-white/10 hover:border-yellow-400 uppercase">Ночь</a>
+                                                    <a href="https://docs.google.com/spreadsheets/d/1IMa9PdLiTkB6rwXilvM-wuNl6Zi3tcGf2xZt24ZI9mY/edit#gid=715446351" target="_blank" className="bg-white/5 p-2 rounded text-[10px] text-center border border-white/10 hover:border-yellow-400 font-black italic">1 ГР</a>
+                                                    <a href="https://docs.google.com/spreadsheets/d/1PvbypdcAN0Nqnb5mt4M6eARiBkXu7ARf_WJsn5bRtRk/edit#gid=1362933848" target="_blank" className="bg-white/5 p-2 rounded text-[10px] text-center border border-white/10 hover:border-yellow-400 font-black italic">2 ГР</a>
+                                                    <a href="https://docs.google.com/spreadsheets/d/1wdhc0l2puo9KZnGBX-hr7wyKZeCOCNuK0hUXySU4JcA/edit#gid=627104501" target="_blank" className="bg-white/5 p-2 rounded text-[10px] text-center border border-white/10 hover:border-yellow-400 font-black italic uppercase">Ночь</a>
                                                 </div>
-                                                <a href="https://docs.google.com/spreadsheets/d/1ZZdz7yBQWfYDBG9Y6BB5KsNuFDSGH5oExO_ICm6VBPc/edit#gid=0" target="_blank" className="block bg-yellow-400 text-black text-center p-3 rounded-xl uppercase text-xs shadow-lg">Мотивация (оплата)</a>
+                                                <a href="https://docs.google.com/spreadsheets/d/1ZZdz7yBQWfYDBG9Y6BB5KsNuFDSGH5oExO_ICm6VBPc/edit#gid=0" target="_blank" className="block bg-yellow-400 text-black text-center p-3 rounded-xl uppercase text-xs shadow-lg italic">Мотивация (оплата)</a>
                                             </div>
                                         </div>
                                     </div>
@@ -143,53 +156,53 @@
                             {/* СЛАЙД 3: АРСЕНАЛ (ЯРКИЙ) */}
                             {currentSlide === 3 && (
                                 <div className="animate-in slide-in-from-right duration-300">
-                                    <h2 className="text-4xl font-black uppercase mb-12 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4">🛠 Твой Арсенал</h2>
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <h2 className="text-4xl font-black uppercase mb-12 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black italic">🛠 Твой Арсенал</h2>
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 font-black italic">
                                         <a href="https://svoicrm.ru/stream/?login=yes" target="_blank" className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
                                             <div className="bg-black text-yellow-400 p-6 rounded-3xl mb-4 group-hover:rotate-12 transition-transform inline-block shadow-lg"><Icon name="message-square" size={32}/></div>
                                             <h4 className="uppercase text-black">Bitrix24</h4>
-                                            <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2 opacity-50">Основная площадка</p>
+                                            <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2">Основная площадка</p>
                                         </a>
                                         <div className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
-                                            <div className="bg-black text-yellow-400 p-6 rounded-3xl mb-4 group-hover:rotate-12 transition-transform inline-block shadow-lg"><Icon name="shield-check" size={32}/></div>
+                                            <div className="bg-gray-200 text-black p-6 rounded-3xl mb-4 group-hover:rotate-12 transition-transform inline-block shadow-lg"><Icon name="shield-check" size={32}/></div>
                                             <h4 className="uppercase text-black">DFS</h4>
                                             <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2 opacity-50">Панель управления</p>
                                         </div>
                                         <a href="https://svoi.motivity.ru/" target="_blank" className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
                                             <div className="bg-black text-yellow-400 p-6 rounded-3xl mb-4 group-hover:-rotate-12 transition-transform inline-block shadow-lg"><Icon name="book-open" size={32}/></div>
-                                            <h4 className="uppercase text-black">Motivity</h4>
-                                            <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2 opacity-50">База знаний</p>
+                                            <h4 className="uppercase text-black font-black">Motivity</h4>
+                                            <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2">База знаний</p>
                                         </a>
                                         <div className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
-                                            <div className="bg-black text-yellow-400 p-6 rounded-3xl mb-4 group-hover:-rotate-12 transition-transform inline-block shadow-lg"><Icon name="users" size={32}/></div>
+                                            <div className="bg-gray-200 text-black p-6 rounded-3xl mb-4 group-hover:-rotate-12 transition-transform inline-block shadow-lg"><Icon name="users" size={32}/></div>
                                             <h4 className="uppercase text-black">Telegram</h4>
                                             <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2 opacity-50">Связь с командой</p>
                                         </div>
                                     </div>
-                                    <div className="mt-16 bg-black text-yellow-400 p-5 rounded-full text-center uppercase tracking-[0.2em] text-xs shadow-2xl">🚀 Сомневаешься в ответе? Проверь в Базе Знаний SVOI!</div>
+                                    <div className="mt-16 bg-black text-yellow-400 p-5 rounded-full text-center uppercase tracking-[0.2em] text-xs shadow-2xl font-black italic">🚀 Сомневаешься в ответе? Проверь в Твоей Шпаргалке SVOI!</div>
                                 </div>
                             )}
 
                             {/* СЛАЙД 4: МАРШРУТИЗАЦИЯ */}
                             {currentSlide === 4 && (
-                                <div className="animate-in slide-in-from-right duration-300">
-                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4">🧭 Маршрутизация</h2>
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 italic">🧭 Маршрутизация</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-blue-50/20"><h3 className="text-blue-600 uppercase mb-4 tracking-tighter text-xl underline decoration-blue-200">Оставляем в ТП</h3><p className="text-sm leading-relaxed text-gray-600">Смена типа оплаты, вывод денег, лицензии и разрешения, проверка авто под тарифы парка.</p></div>
-                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-red-50/20"><h3 className="text-red-600 uppercase mb-4 tracking-tighter text-xl underline decoration-red-200">Яндекс Поддержка</h3><p className="text-sm leading-relaxed text-gray-600">Неоплата заказов, жалобы на пассажиров, ошибки Яндекс Про, изменения ФИО в приложении.</p></div>
-                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-purple-50/20 font-black"><h3 className="text-purple-600 uppercase mb-4 tracking-tighter text-xl underline decoration-purple-200">РГ / Старшие</h3><p className="text-sm leading-relaxed text-gray-600 font-black">Повышение лимита до 30 000 ₽, серьезные конфликты, технические сбои и неординарные кейсы.</p></div>
-                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-orange-50/20"><h3 className="text-orange-600 uppercase mb-4 tracking-tighter text-xl underline decoration-orange-200">Фин. отдел</h3><p className="text-sm leading-relaxed text-gray-600">Ошибки кнопки вывода, пополнение баланса, кейсы по антифроду и ручной перенос баланса.</p></div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-blue-50/20"><h3 className="text-blue-600 uppercase mb-4 tracking-tighter text-xl underline decoration-blue-200">Оставляем в ТП</h3><p className="text-sm leading-relaxed text-gray-600 italic">Смена типа оплаты, вывод денег, лицензии и разрешения, проверка авто под тарифы парка.</p></div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-red-50/20"><h3 className="text-red-600 uppercase mb-4 tracking-tighter text-xl underline decoration-red-200">Яндекс Поддержка</h3><p className="text-sm leading-relaxed text-gray-600 italic">Неоплата заказов, жалобы на пассажиров, ошибки Яндекс Про, изменения ФИО в приложении.</p></div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-purple-50/20 font-black"><h3 className="text-purple-600 uppercase mb-4 tracking-tighter text-xl underline decoration-purple-200">РГ / Старшие</h3><p className="text-sm leading-relaxed text-gray-600 font-black italic">Повышение лимита до 30 000 ₽, серьезные конфликты, технические сбои и неординарные кейсы.</p></div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-orange-50/20"><h3 className="text-orange-600 uppercase mb-4 tracking-tighter text-xl underline decoration-orange-200 font-black">Фин. отдел</h3><p className="text-sm leading-relaxed text-gray-600 font-black italic">Ошибки кнопки вывода, пополнение баланса, кейсы по антифроду и ручной перенос баланса.</p></div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* СЛАЙД 5: КУЛЬТУРА ОБЩЕНИЯ (ПО ПУНКТАМ) */}
+                            {/* СЛАЙД 5: КУЛЬТУРА ОБЩЕНИЯ - ОБНОВЛЕНО */}
                             {currentSlide === 5 && (
-                                <div className="flex flex-col items-center animate-in slide-in-from-right duration-300">
-                                    <h2 className="text-4xl font-black uppercase mb-12 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4">💬 Культура общения</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full">
+                                <div className="flex flex-col items-center animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-12 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">💬 Культура общения</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full italic">
                                         <div className="space-y-4">
-                                            <p className="text-green-500 font-black uppercase text-[10px] tracking-widest mb-2">МЫ ВСЕГДА:</p>
+                                            <p className="text-green-500 font-black uppercase text-[10px] tracking-widest mb-2 italic">МЫ ВСЕГДА:</p>
                                             <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight">• Общаемся на «Вы»</div>
                                             <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight">• Сохраняем деловой стиль</div>
                                             <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight">• Проверяем орфографию</div>
@@ -198,11 +211,11 @@
                                         </div>
                                         <div className="space-y-4 opacity-70">
                                             <p className="text-red-500 font-black uppercase text-[10px] tracking-widest mb-2 italic">КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:</p>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none">• Метафоры / Юмор</div>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none">• Хамство и грубость</div>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none">• Закрывать чат без решения</div>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none">• Спорить</div>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none">• Общаться как с другом</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Метафоры / Юмор</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Хамство и грубость</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Закрывать чат без решения</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Спорить</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Общаться как с другом</div>
                                         </div>
                                     </div>
                                 </div>
@@ -210,21 +223,21 @@
 
                             {/* СЛАЙД 6: РЕЖИМ СМЕНЫ */}
                             {currentSlide === 6 && (
-                                <div className="flex flex-col items-center justify-center h-full animate-in slide-in-from-right duration-300">
-                                    <h2 className="text-4xl font-black uppercase mb-16 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4">📋 Режим смены</h2>
+                                <div className="flex flex-col items-center justify-center h-full animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-16 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">📋 Режим смены</h2>
                                     <div className="space-y-12 w-full max-w-xl">
-                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4"><div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl italic">08:59</div><div className="text-2xl uppercase tracking-tighter">СТАРТ В BITRIX24</div></div>
-                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4"><div className="bg-yellow-400 text-black p-6 rounded-[30px] w-32 text-center shadow-xl text-2xl uppercase italic">ПЕРЕРЫВ</div><div className="text-2xl leading-tight uppercase font-black">2 ПО 30 МИНУТ <br/><span className="text-gray-400 text-sm font-black italic">+ 3 ПО 10 МИНУТ</span></div></div>
-                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4"><div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl italic">21:00</div><div className="text-2xl uppercase tracking-tighter text-shadow font-black">ФИНИШ СМЕНЫ</div></div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4"><div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">08:59</div><div className="text-2xl uppercase tracking-tighter">СТАРТ В BITRIX24</div></div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4"><div className="bg-yellow-400 text-black p-6 rounded-[30px] w-32 text-center shadow-xl text-2xl uppercase font-black italic">ПЕРЕРЫВ</div><div className="text-2xl leading-tight uppercase font-black">2 ПО 30 МИНУТ <br/><span className="text-gray-400 text-sm italic">+ 3 ПО 10 МИНУТ</span></div></div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4"><div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">21:00</div><div className="text-2xl uppercase tracking-tighter text-shadow">ФИНИШ СМЕНЫ</div></div>
                                     </div>
                                 </div>
                             )}
 
                             {/* СЛАЙД 7: КОМАНДА */}
                             {currentSlide === 7 && (
-                                <div className="animate-in slide-in-from-right duration-300">
-                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4">👥 Твоя поддержка</h2>
-                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic font-black">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black italic">👥 Твоя поддержка</h2>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 font-black italic">
                                         {[
                                             { name: "Данил Брюхин", role: "РО Клиентский сервис", handle: "@d_breww", url: "https://t.me/d_breww", type: "gold" },
                                             { name: "Ангелина Мешкова", role: "РО Обучения", handle: "@mOorgenstern", url: "https://t.me/mOorgenstern", type: "gold" },
@@ -235,9 +248,9 @@
                                             { name: "Дмитрий Щеглов", role: "РГ", handle: "@Shcheglov_98", url: "https://t.me/Shcheglov_98", type: "gold" }
                                         ].map((p, i) => (
                                             <div key={i} className={`p-6 rounded-[32px] border-b-8 shadow-sm transition-all hover:shadow-xl ${p.type === 'gold' ? 'border-yellow-400 bg-gray-50' : 'border-gray-100 bg-white'}`}>
-                                                <p className="font-black text-black uppercase text-sm leading-tight mb-1">{p.name}</p>
-                                                <p className="text-[8px] text-gray-400 uppercase mb-4 tracking-widest opacity-50">{p.role}</p>
-                                                <a href={p.url} target="_blank" className="bg-black text-yellow-400 px-4 py-2 rounded-xl text-[10px] font-black inline-block hover:bg-yellow-400 hover:text-black transition-all shadow-md">{p.handle}</a>
+                                                <p className="font-black text-black uppercase text-sm leading-tight mb-1 italic italic font-black">{p.name}</p>
+                                                <p className="text-[8px] text-gray-400 uppercase mb-4 tracking-widest font-black opacity-50 italic">{p.role}</p>
+                                                <a href={p.url} target="_blank" className="bg-black text-yellow-400 px-4 py-2 rounded-xl text-[10px] font-black inline-block hover:bg-yellow-400 hover:text-black transition-all shadow-md italic font-black italic">@{p.handle.replace('@','')}</a>
                                             </div>
                                         ))}
                                     </div>
@@ -246,8 +259,8 @@
 
                             {/* СЛАЙД 8: MOTIVITY */}
                             {currentSlide === 8 && (
-                                <div className="animate-in slide-in-from-right duration-300">
-                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4">🔗 База Знаний (Motivity)</h2>
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 italic">🔗 Полезные ссылки</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {[
                                             { name: 'Урок: Диспетчерская (DFS)', url: 'https://svoi.motivity.ru/study/lessons/55' },
@@ -259,76 +272,98 @@
                                             { name: 'Смена автомобиля в парке', url: 'https://svoi.motivity.ru/library/file/263' },
                                             { name: 'Классификатор', url: 'https://svoi.motivity.ru/study/lessons/113' }
                                         ].map((item, idx) => (
-                                            <a key={idx} href={item.url} target="_blank" className="p-5 bg-gray-50 rounded-[24px] border-2 border-gray-50 hover:border-yellow-400 hover:bg-white flex justify-between group transition-all shadow-sm">
-                                                <span className="text-black uppercase text-xs tracking-tighter">{item.name}</span> <Icon name="external-link" size={16} className="text-yellow-500 opacity-30 group-hover:opacity-100" />
+                                            <a key={idx} href={item.url} target="_blank" className="p-5 bg-gray-50 rounded-[24px] border-2 border-gray-50 hover:border-yellow-400 hover:bg-white flex justify-between group transition-all shadow-sm font-black italic">
+                                                <span className="text-black uppercase text-[10px] tracking-tighter">{item.name}</span> <Icon name="external-link" size={16} className="text-yellow-500 opacity-30 group-hover:opacity-100" />
                                             </a>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            {/* СЛАЙД 9: ФИНИШ */}
+                            {/* СЛАЙД 9: МЕНЮ ШПАРГАЛКИ (ОБНОВЛЕНО ПО СКРИНШОТУ) */}
                             {currentSlide === 9 && (
-                                <div className="flex flex-col items-center justify-center h-full text-center bg-yellow-400 rounded-[40px] p-10 shadow-2xl relative overflow-hidden animate-in zoom-in duration-500">
-                                    <Icon name="shield-check" size={120} className="mb-10 text-black animate-bounce shadow-xl" />
-                                    <h2 className="text-7xl font-black uppercase italic leading-[0.8] mb-8 tracking-tighter text-black text-shadow">ТЫ ГОТОВ <br/><span className="text-white drop-shadow-2xl">К РАБОТЕ!</span></h2>
-                                    <p className="text-2xl max-w-2xl font-black italic mb-12 uppercase tracking-tighter text-black/60">Обучение завершено. Закрепи знания с помощью шпаргалки таксопарка ниже.</p>
-                                    <button onClick={scrollToCheatSheet} className="bg-black text-yellow-400 px-20 py-8 rounded-[30px] font-black uppercase italic tracking-[0.2em] hover:scale-105 transition-all shadow-[0_25px_60px_rgba(0,0,0,0.5)] flex items-center gap-6 text-2xl active:scale-95 border-b-8 border-yellow-600">Открыть шпаргалку <Icon name="chevron-down" size={40} /></button>
+                                <div className="flex flex-col items-center justify-start h-full text-center bg-yellow-400 rounded-[40px] p-8 shadow-2xl relative overflow-hidden animate-in zoom-in duration-500 italic font-black font-black italic">
+                                    <Icon name="shield-check" size={80} className="mb-4 text-black animate-bounce shadow-xl italic" />
+                                    <h2 className="text-5xl font-black uppercase italic leading-[0.8] mb-4 tracking-tighter text-black text-shadow italic font-black">ТЫ ГОТОВ <br/><span className="text-white drop-shadow-2xl">К РАБОТЕ!</span></h2>
+                                    <p className="text-xs uppercase tracking-tighter text-black/60 mb-10">ОБУЧЕНИЕ ЗАВЕРШЕНО. ЗАКРЕПИ ЗНАНИЯ С ПОМОЩЬЮ ШПАРГАЛКИ ТАКСОПАРКА НИЖЕ.</p>
+                                    
+                                    {/* СЕТКА КНОПОК ПЕРЕХОДА */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full font-black italic">
+                                        {[
+                                            { id: 'commission', label: 'Комиссии парка' },
+                                            { id: 'bonuses', label: 'Бонусы парка' },
+                                            { id: 'minivan', label: 'Минивен, Cruise' },
+                                            { id: 'license', label: 'Лицензия/разрешение' },
+                                            { id: 'colors', label: 'Цвет авто МСК/МО' },
+                                            { id: 'contract', label: 'Карточка фрахтовщика' },
+                                            { id: 'osago', label: 'ОСАГО/ОСГОП' },
+                                            { id: 'kisart', label: 'КИС "АРТ"' },
+                                            { id: 'smz', label: 'СМЗ и ИП' }
+                                        ].map((btn) => (
+                                            <button 
+                                                key={btn.id}
+                                                onClick={() => scrollToSection(btn.id)}
+                                                className="bg-black text-yellow-400 p-4 rounded-2xl font-black uppercase italic text-[10px] hover:scale-105 transition-all shadow-xl border-b-4 border-yellow-600 active:translate-y-1 italic"
+                                            >
+                                                {btn.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
 
-                        <div className="p-8 flex justify-end gap-5 bg-gray-50/50 relative z-50">
-                            <button onClick={() => setCurrentSlide(p => Math.max(1, p-1))} disabled={currentSlide === 1} className="p-6 rounded-[30px] bg-white border border-gray-200 hover:bg-black hover:text-yellow-400 disabled:opacity-10 transition-all shadow-xl active:scale-90"><Icon name="chevron-left" size={40}/></button>
-                            <button onClick={() => setCurrentSlide(p => Math.min(totalSlides, p+1))} disabled={currentSlide === totalSlides} className="p-6 rounded-[30px] bg-yellow-400 text-black hover:scale-110 shadow-2xl font-black transition-all border-4 border-black active:scale-90"><Icon name="chevron-right" size={40}/></button>
+                        <div className="p-8 flex justify-end gap-5 bg-gray-50/50 relative z-50 italic">
+                            <button onClick={() => setCurrentSlide(p => Math.max(1, p-1))} disabled={currentSlide === 1} className="p-6 rounded-[30px] bg-white border border-gray-200 hover:bg-black hover:text-yellow-400 disabled:opacity-10 transition-all shadow-xl active:scale-90 italic"><Icon name="chevron-left" size={40}/></button>
+                            <button onClick={() => setCurrentSlide(p => Math.min(totalSlides, p+1))} disabled={currentSlide === totalSlides} className="p-6 rounded-[30px] bg-yellow-400 text-black hover:scale-110 shadow-2xl font-black transition-all border-4 border-black active:scale-90 italic italic font-black"><Icon name="chevron-right" size={40}/></button>
                         </div>
                     </div>
                 </div>
             );
 
             return (
-                <div className="min-h-screen bg-[#f3f4f6] overflow-x-hidden selection:bg-yellow-400 selection:text-black italic font-black">
-                    <header className="bg-[#1a1a1a] p-6 border-b-4 border-yellow-400 flex justify-between items-center sticky top-0 z-[100] shadow-2xl">
-                        <div className="flex items-center gap-6">
-                            <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-12" />
-                            <div className="hidden lg:block text-white/40 font-black uppercase text-[9px] tracking-widest leading-tight">Сертифицированный партнер <br/>Яндекс.Такси с 2011 года</div>
+                <div className="min-h-screen bg-[#f3f4f6] overflow-x-hidden selection:bg-yellow-400 selection:text-black italic font-black font-black italic">
+                    <header className="bg-[#1a1a1a] p-6 border-b-4 border-yellow-400 flex justify-between items-center sticky top-0 z-[100] shadow-2xl italic font-black italic">
+                        <div className="flex items-center gap-6 italic">
+                            <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-12 italic" />
+                            <div className="hidden lg:block text-white/40 font-black italic uppercase text-[9px] tracking-widest leading-tight italic font-black">Сертифицированный партнер <br/>Яндекс.Такси с 2011 года</div>
                         </div>
                         {view !== 'main' && (
-                            <button onClick={goBack} className="bg-yellow-400 text-black px-10 py-3 rounded-2xl font-black uppercase italic text-xs border-2 border-black hover:scale-110 transition-all shadow-xl font-bold tracking-widest">На главную</button>
+                            <button onClick={goBack} className="bg-yellow-400 text-black px-10 py-3 rounded-2xl font-black uppercase italic text-xs border-2 border-black hover:scale-110 transition-all shadow-xl font-bold tracking-widest italic font-black">На главную</button>
                         )}
                     </header>
 
-                    <div className="relative h-24 bg-white border-b-8 border-black overflow-hidden shadow-inner">
+                    <div className="relative h-24 bg-white border-b-8 border-black overflow-hidden shadow-inner italic italic font-black">
                         <div className="bg-dashed-line"></div>
-                        <div className="absolute top-1/2 -translate-y-1/2 animate-drive-slow flex items-center gap-5">
-                            <div className="bg-black text-yellow-400 px-8 py-3 rounded-[24px] font-black italic uppercase text-sm flex items-center gap-4 shadow-2xl border-4 border-yellow-400/10 tracking-widest">
-                                <Icon name="car" size={24} className="animate-bounce" /> СВОИ ТАКСИ
+                        <div className="absolute top-1/2 -translate-y-1/2 animate-drive-slow flex items-center gap-5 italic font-black">
+                            <div className="bg-black text-yellow-400 px-8 py-3 rounded-[24px] font-black italic uppercase text-sm flex items-center gap-4 shadow-2xl border-4 border-yellow-400/10 tracking-widest italic font-black">
+                                <Icon name="car" size={24} className="animate-bounce italic font-black" /> СВОИ ТАКСИ
                             </div>
-                            <div className="w-[600px] h-2 bg-black/5 rounded-full"></div>
+                            <div className="w-[600px] h-2 bg-black/5 rounded-full italic font-black"></div>
                         </div>
                     </div>
 
                     {view === 'main' && (
-                        <main className="max-w-7xl mx-auto py-24 px-8 animate-in fade-in duration-700">
-                            <div className="flex flex-col md:flex-row items-end justify-between gap-10 mb-24 border-b-8 border-black pb-12">
-                                <div className="max-w-2xl relative">
-                                    <div className="absolute -top-12 -left-8 bg-black text-yellow-400 px-6 py-2 rounded-full font-black text-[12px] uppercase italic tracking-[0.3em] shadow-2xl">Staff Portal v2.0</div>
-                                    <h1 className="text-8xl md:text-[140px] font-black italic tracking-tighter uppercase leading-[0.75] text-black text-shadow font-black">БУДЬ <br/><span className="text-yellow-400 bg-black px-6 inline-block transform -skew-x-6 italic">СВОИМ</span> <br/>В КОМАНДЕ.</h1>
+                        <main className="max-w-7xl mx-auto py-24 px-8 animate-in fade-in duration-700 italic font-black italic font-black">
+                            <div className="flex flex-col md:flex-row items-end justify-between gap-10 mb-24 border-b-8 border-black pb-12 italic font-black italic">
+                                <div className="max-w-2xl relative italic italic font-black italic">
+                                    <div className="absolute -top-12 -left-8 bg-black text-yellow-400 px-6 py-2 rounded-full font-black text-[12px] uppercase italic tracking-[0.3em] shadow-2xl italic font-black italic font-black">Staff Portal v2.0</div>
+                                    <h1 className="text-8xl md:text-[140px] font-black italic tracking-tighter uppercase leading-[0.75] text-black text-shadow font-black italic italic font-black italic italic font-black">БУДЬ <br/><span className="text-yellow-400 bg-black px-6 inline-block transform -skew-x-6 italic font-black italic font-black italic">СВОИМ</span> <br/>В КОМАНДЕ.</h1>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-gray-400 font-black italic uppercase text-sm tracking-[0.2em] leading-tight">Официальная система <br/>обучения и поддержки</p>
-                                    <div className="w-40 h-3 bg-yellow-400 mt-4 ml-auto rounded-full"></div>
+                                <div className="text-right italic italic font-black">
+                                    <p className="text-gray-400 font-black italic uppercase text-sm tracking-[0.2em] leading-tight italic font-black">Официальная система <br/>обучения и поддержки</p>
+                                    <div className="w-40 h-3 bg-yellow-400 mt-4 ml-auto rounded-full italic font-black"></div>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                                 {DEPARTMENTS.map(dept => (
-                                    <button key={dept.id} onClick={() => handleDeptSelect(dept)} className="group bg-white p-14 rounded-[70px] shadow-2xl border-b-[16px] border-gray-100 hover:border-yellow-400 transition-all hover:-translate-y-6 text-center overflow-hidden relative border border-gray-50 active:scale-95 duration-300">
-                                        <div className="bg-black text-yellow-400 w-20 h-20 rounded-[30px] flex items-center justify-center mx-auto mb-10 shadow-2xl group-hover:rotate-12 transition-transform">
+                                    <button key={dept.id} onClick={() => handleDeptSelect(dept)} className="group bg-white p-14 rounded-[70px] shadow-2xl border-b-[16px] border-gray-100 hover:border-yellow-400 transition-all hover:-translate-y-6 text-center overflow-hidden relative border border-gray-50 active:scale-95 duration-300 italic font-black font-black italic">
+                                        <div className="bg-black text-yellow-400 w-20 h-20 rounded-[30px] flex items-center justify-center mx-auto mb-10 shadow-2xl group-hover:rotate-12 transition-transform italic font-black italic font-black">
                                             <Icon name={dept.icon} size={40} />
                                         </div>
-                                        <h3 className="text-3xl font-black italic uppercase mb-4 tracking-tighter text-black leading-none font-black italic">{dept.title}</h3>
-                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest italic leading-relaxed opacity-50">{dept.description}</p>
-                                        <div className="absolute -bottom-10 -right-10 text-black/[0.02] rotate-12 pointer-events-none transition-transform group-hover:scale-150"><Icon name={dept.icon} size={150} /></div>
+                                        <h3 className="text-3xl font-black italic uppercase mb-4 tracking-tighter text-black leading-none font-black italic italic italic font-black">{dept.title}</h3>
+                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest italic leading-relaxed opacity-50 font-black italic font-black">{dept.description}</p>
+                                        <div className="absolute -bottom-10 -right-10 text-black/[0.02] rotate-12 pointer-events-none transition-transform group-hover:scale-150 italic font-black font-black italic font-black"><Icon name={dept.icon} size={150} /></div>
                                     </button>
                                 ))}
                             </div>
@@ -336,112 +371,95 @@
                     )}
 
                     {view === 'auth' && (
-                        <main className="max-w-xl mx-auto py-32 px-8 animate-in zoom-in-95 duration-300">
-                            <div className="bg-white p-16 rounded-[80px] shadow-2xl text-center border-[12px] border-black relative overflow-hidden font-black">
-                                <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-400 -translate-y-20 translate-x-20 rotate-45 opacity-50"></div>
-                                <Icon name="lock" size={80} className="mx-auto mb-12 text-black" />
-                                <h2 className="text-4xl font-black uppercase italic mb-3 tracking-tighter text-black">Вход в сектор</h2>
-                                <p className="text-gray-400 mb-12 italic text-xl font-black uppercase tracking-[0.2em] underline decoration-yellow-400 decoration-[12px] underline-offset-8">{selectedDept.title}</p>
+                        <main className="max-w-xl mx-auto py-32 px-8 animate-in zoom-in-95 duration-300 font-black italic font-black italic font-black">
+                            <div className="bg-white p-16 rounded-[80px] shadow-2xl text-center border-[12px] border-black relative overflow-hidden font-black italic italic font-black italic">
+                                <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-400 -translate-y-20 translate-x-20 rotate-45 opacity-50 italic font-black font-black italic"></div>
+                                <Icon name="lock" size={80} className="mx-auto mb-12 text-black font-black" />
+                                <h2 className="text-4xl font-black uppercase italic mb-3 tracking-tighter text-black font-black italic italic font-black font-black">Вход в сектор</h2>
+                                <p className="text-gray-400 mb-12 italic text-xl font-black uppercase tracking-[0.2em] underline decoration-yellow-400 decoration-[12px] underline-offset-8 italic font-black font-black font-black">{selectedDept.title}</p>
                                 <form onSubmit={handlePinSubmit} className="space-y-12">
-                                    <input type="password" maxLength="4" placeholder="••••" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full bg-gray-100 text-center text-7xl py-10 rounded-[45px] border-4 border-gray-50 focus:border-yellow-400 transition-all font-black shadow-inner italic" />
-                                    {error && <p className="text-red-500 font-black uppercase animate-shake tracking-widest text-xs italic">Код доступа не подтвержден</p>}
-                                    <button type="submit" className="w-full bg-yellow-400 text-black py-8 rounded-[45px] font-black uppercase italic text-3xl shadow-2xl hover:scale-105 transition-all shadow-yellow-400/20 active:scale-95 tracking-widest">Войти</button>
+                                    <input type="password" maxLength="4" placeholder="••••" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full bg-gray-100 text-center text-7xl py-10 rounded-[45px] border-4 border-gray-50 focus:border-yellow-400 transition-all font-black shadow-inner italic font-black font-black italic" />
+                                    {error && <p className="text-red-500 font-black uppercase animate-shake tracking-widest text-xs font-black italic font-black italic">Код доступа не подтвержден</p>}
+                                    <button type="submit" className="w-full bg-yellow-400 text-black py-8 rounded-[45px] font-black uppercase italic text-3xl shadow-2xl hover:scale-105 transition-all shadow-yellow-400/20 active:scale-95 italic tracking-widest font-black italic">Войти</button>
                                 </form>
                             </div>
                         </main>
                     )}
 
                     {view === 'content' && (
-                        <main className="animate-in slide-in-from-bottom-10 duration-1000">
-                            <div className="bg-black text-yellow-400 py-5 text-center sticky top-[95px] z-[90] shadow-2xl font-black text-[11px] uppercase tracking-[0.5em] italic overflow-hidden">
-                                <div className="animate-marquee">Access Level: Restricted • Sector: {selectedDept.title} • Employee Profile: Active • Taxi Svoi Ecosystem • Knowledge Base Access Granted</div>
+                        <main className="animate-in slide-in-from-bottom-10 duration-1000 italic font-black italic font-black italic font-black">
+                            <div className="bg-black text-yellow-400 py-5 text-center sticky top-[95px] z-[90] shadow-2xl font-black text-[11px] uppercase tracking-[0.5em] italic overflow-hidden font-black italic font-black italic">
+                                <div className="animate-marquee italic italic font-black italic font-black italic">ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ</div>
                             </div>
-                            <div className="py-24">
+                            <div className="py-24 font-black italic font-black italic font-black italic">
                                 <Presentation />
-                                <div ref={cheatSheetRef} className="w-full max-w-6xl mx-auto px-4 pb-40 text-black pt-20">
-                                    <h2 className="text-7xl md:text-[100px] font-black italic uppercase tracking-tighter mb-24 text-center leading-none">БАЗА <br/><span className="text-yellow-400 bg-black px-6 transform skew-x-[-5deg] inline-block shadow-xl">ЗНАНИЙ</span> СВОИ</h2>
+                                <div ref={cheatSheetRef} className="w-full max-w-6xl mx-auto px-4 pb-40 text-black pt-20 font-black italic font-black italic font-black">
+                                    <h2 className="text-7xl md:text-[100px] font-black italic uppercase tracking-tighter mb-24 text-center leading-none italic font-black italic font-black italic font-black">ТВОЯ <br/><span className="text-yellow-400 bg-black px-6 transform skew-x-[-5deg] inline-block shadow-xl italic font-black italic italic font-black italic italic font-black">ШПАРГАЛКА</span> СВОИ</h2>
                                     
-                                    {/* БЛОК КОМИССИИ ПАРКА */}
-                                    <div className="grid grid-cols-1 gap-12 font-black italic">
-                                        <div className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
-                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6">
-                                                <Icon name="credit-card" size={60} className="text-black" />
-                                                <h3 className="text-5xl font-black uppercase tracking-tighter italic">Комиссии парка</h3>
+                                    {/* БЛОКИ ШПАРГАЛКИ */}
+                                    <div className="grid grid-cols-1 gap-20">
+                                        
+                                        {/* 1. КОМИССИИ */}
+                                        <div id="commission" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100 italic italic font-black">
+                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6 font-black italic font-black italic font-black">
+                                                <Icon name="credit-card" size={60} className="text-black font-black italic" />
+                                                <h3 className="text-5xl font-black uppercase tracking-tighter italic font-black">Комиссии парка</h3>
                                             </div>
-                                            
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 font-black italic">
                                                 <div className="space-y-6">
-                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400">
-                                                        <h4 className="text-yellow-600 uppercase text-xs mb-2 italic">Такси (Парковые):</h4>
-                                                        <p className="text-2xl font-black">1.4% + 6 ₽ + 60 ₽/день</p>
-                                                    </div>
-                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400">
-                                                        <h4 className="text-yellow-600 uppercase text-xs mb-2 italic">Курьеры (Парковые):</h4>
-                                                        <p className="text-2xl font-black">1.4% + 60 ₽/день</p>
-                                                    </div>
+                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400 italic font-black"><h4 className="text-yellow-600 uppercase text-xs mb-2 italic">Такси (Парковые):</h4><p className="text-2xl font-black italic">1.4% + 6 ₽ + 60 ₽/день</p></div>
+                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400 italic font-black"><h4 className="text-yellow-600 uppercase text-xs mb-2 italic">Курьеры (Парковые):</h4><p className="text-2xl font-black italic">1.4% + 60 ₽/день</p></div>
                                                 </div>
                                                 <div className="space-y-6">
-                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl">
-                                                        <h4 className="text-yellow-400 uppercase text-xs mb-2 italic">ПСМЗ и ИП (Такси):</h4>
-                                                        <p className="text-2xl font-black">0% (7 дней) → далее 1%</p>
-                                                    </div>
-                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl">
-                                                        <h4 className="text-yellow-400 uppercase text-xs mb-2 italic">ПСМЗ и ИП (Курьеры):</h4>
-                                                        <p className="text-2xl font-black">1% + 50 ₽/день</p>
-                                                    </div>
+                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl font-black italic"><h4 className="text-yellow-400 uppercase text-xs mb-2 italic italic font-black">ПСМЗ и ИП (Такси):</h4><p className="text-2xl font-black italic italic italic font-black">0% (7 дней) → далее 1%</p></div>
+                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl font-black italic"><h4 className="text-yellow-400 uppercase text-xs mb-2 italic italic font-black">ПСМЗ и ИП (Курьеры):</h4><p className="text-2xl font-black italic italic italic font-black">1% + 50 ₽/день</p></div>
                                                 </div>
                                             </div>
-
-                                            <div className="mt-12 bg-red-50 p-10 rounded-[40px] border-4 border-red-500 shadow-2xl">
-                                                <h4 className="text-red-600 text-3xl mb-8 uppercase tracking-tighter italic underline decoration-red-200">Повышение комиссии</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-black">
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] text-red-400 uppercase italic font-black">Парковые водители:</p>
-                                                        <p className="text-sm font-black">1.4% <span className="text-red-500">→</span> 5.5%</p>
-                                                        <p className="text-sm font-black">6 ₽ <span className="text-red-500">→</span> 10 ₽</p>
-                                                        <p className="text-sm font-black">60/сут <span className="text-red-500">→</span> 150/сут</p>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] text-red-400 uppercase italic font-black">Парковые курьеры:</p>
-                                                        <p className="text-sm font-black">1.4% <span className="text-red-500">→</span> 6%</p>
-                                                        <p className="text-sm font-black">60/сут <span className="text-red-500">→</span> 1.4% <span className="text-red-500">→</span> 6%</p>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] text-red-400 uppercase italic font-black">ПСМЗ:</p>
-                                                        <p className="text-sm font-black">Водители: 1% <span className="text-red-500">→</span> 3%</p>
-                                                        <p className="text-sm font-black">Курьеры: 50 ₽/сут <span className="text-red-500">→</span> 1.4% <span className="text-red-500">→</span> 3%</p>
-                                                    </div>
+                                            <div className="mt-12 bg-red-50 p-10 rounded-[40px] border-4 border-red-500 shadow-2xl font-black italic italic font-black">
+                                                <h4 className="text-red-600 text-3xl mb-8 uppercase tracking-tighter italic underline decoration-red-200 font-black italic font-black">Повышение комиссии</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-black italic">
+                                                    <div className="space-y-2 font-black italic"><p className="text-[10px] text-red-400 uppercase italic italic font-black">Парковые водители:</p><p className="text-sm font-black italic">1.4% <span className="text-red-500 font-black">→</span> 5.5%</p><p className="text-sm font-black italic">6 ₽ <span className="text-red-500 font-black">→</span> 10 ₽</p><p className="text-sm font-black italic">60/сут <span className="text-red-500 font-black">→</span> 150/сут</p></div>
+                                                    <div className="space-y-2 font-black italic"><p className="text-[10px] text-red-400 uppercase italic italic font-black">Парковые курьеры:</p><p className="text-sm font-black italic">1.4% <span className="text-red-500 font-black">→</span> 6%</p><p className="text-sm font-black italic">60/сут <span className="text-red-500 font-black">→</span> 1.4% <span className="text-red-500 font-black">→</span> 6%</p></div>
+                                                    <div className="space-y-2 font-black italic"><p className="text-[10px] text-red-400 uppercase italic italic font-black">ПСМЗ:</p><p className="text-sm font-black italic">Водители: 1% <span className="text-red-500 font-black">→</span> 3%</p><p className="text-sm font-black italic">Курьеры: 50 ₽/сут <span className="text-red-500 font-black">→</span> 1.4% <span className="text-red-500 font-black">→</span> 3%</p></div>
                                                 </div>
                                             </div>
-                                            
-                                            <div className="mt-10 bg-black text-yellow-400 p-6 rounded-[30px] text-center uppercase tracking-widest text-[10px] border-b-8 border-yellow-600">
-                                                Тариф 50 ₽/сутки доступен только КУРЬЕРАМ на ПСМЗ. <br/>Для водителей ТАКСИ на ПСМЗ такой тариф не предусмотрен.
-                                            </div>
+                                            <div className="mt-10 bg-black text-yellow-400 p-6 rounded-[30px] text-center uppercase tracking-widest text-[10px] border-b-8 border-yellow-600 italic font-black italic">Тариф 50 ₽/сутки доступен только КУРЬЕРАМ на ПСМЗ. <br/>Для водителей ТАКСИ на ПСМЗ такой тариф не предусмотрен.</div>
                                         </div>
-                                    </div>
 
-                                    {/* ПЛЕЙСХОЛДЕРЫ ДЛЯ НОВЫХ ТЕМ */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 font-black italic mt-12">
-                                        <div className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-50 opacity-40">
-                                            <Icon name="car" size={70} className="text-yellow-400 mb-10" />
-                                            <h3 className="text-3xl font-black uppercase italic mb-6 tracking-tighter underline decoration-yellow-400 decoration-8 font-black">Цвета и ГОСТ</h3>
-                                            <p className="text-gray-400 uppercase text-[10px] tracking-widest border-b-8 border-dashed border-yellow-400 pb-4">Ожидаем информацию...</p>
-                                        </div>
-                                        <div className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-50 opacity-40">
-                                            <Icon name="briefcase" size={70} className="text-yellow-400 mb-10" />
-                                            <h3 className="text-3xl font-black uppercase italic mb-6 tracking-tighter underline decoration-yellow-400 decoration-8 font-black">Юр. база</h3>
-                                            <p className="text-gray-400 uppercase text-[10px] tracking-widest border-b-8 border-dashed border-yellow-400 pb-4">Ожидаем информацию...</p>
-                                        </div>
+                                        {/* 2. БОНУСЫ */}
+                                        <div id="bonuses" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="gift" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Бонусы парка</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+
+                                        {/* 3. МИНИВЕН */}
+                                        <div id="minivan" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="truck" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Минивен, Cruise</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+
+                                        {/* 4. ЛИЦЕНЗИЯ */}
+                                        <div id="license" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="file-check" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Лицензия/разрешение</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+
+                                        {/* 5. ЦВЕТ АВТО */}
+                                        <div id="colors" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="palette" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Цвет авто МСК/МО</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+
+                                        {/* 6. ДОГОВОР */}
+                                        <div id="contract" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="clipboard-list" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Карточка фрахтовщика</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+
+                                        {/* 7. ОСАГО */}
+                                        <div id="osago" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="shield" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">ОСАГО/ОСГОП</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+
+                                        {/* 8. КИС АРТ */}
+                                        <div id="kisart" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="key" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">КИС "АРТ"</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+
+                                        {/* 9. СМЗ И ИП */}
+                                        <div id="smz" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="user-check" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">СМЗ и ИП</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+
                                     </div>
                                 </div>
                             </div>
                         </main>
                     )}
 
-                    <footer className="bg-[#1a1a1a] py-32 text-center border-t-8 border-yellow-400">
-                        <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-16 mx-auto opacity-20 mb-10 shadow-2xl" />
-                        <p className="text-gray-600 text-xs font-black uppercase tracking-[0.8em] italic mb-4 font-black">Taxi Svoi Corporate Portal</p>
-                        <p className="text-gray-800 text-[10px] font-black uppercase italic tracking-widest">© 2024 МЫ ВСЕГДА РЯДОМ С ТОБОЙ</p>
+                    <footer className="bg-[#1a1a1a] py-32 text-center border-t-8 border-yellow-400 italic font-black font-black italic">
+                        <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-16 mx-auto opacity-20 mb-10 shadow-2xl italic font-black" />
+                        <p className="text-gray-600 text-xs font-black uppercase tracking-[0.8em] italic mb-4 font-black italic font-black">Taxi Svoi Corporate Portal</p>
+                        <p className="text-gray-800 text-[10px] font-black uppercase italic tracking-widest font-black italic font-black italic font-black italic font-black">© 2024 МЫ ВСЕГДА РЯДОМ С ТОБОЙ</p>
                     </footer>
                 </div>
             );
