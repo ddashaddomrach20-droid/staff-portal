@@ -4,50 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Корпоративный портал СВОИ</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React, ReactDOM, Babel -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; margin: 0; overflow-x: hidden; scroll-behavior: smooth; }
+
         @keyframes driveFull {
             0% { transform: translateX(-150%); }
             100% { transform: translateX(1200%); }
         }
-        .animate-drive-slow { animation: driveFull 45s linear infinite; }
+        .animate-drive-slow { animation: driveFull 25s linear infinite; }
+
         .bg-dashed-line {
             background-image: linear-gradient(to right, #000 50%, transparent 50%);
             background-size: 40px 2px;
             height: 2px;
             width: 100%;
             opacity: 0.1;
-            position: absolute; top: 50%;
+            position: absolute;
+            top: 50%;
         }
+
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-8px); }
             75% { transform: translateX(8px); }
         }
         .animate-shake { animation: shake 0.15s ease-in-out 0s 2; }
+
         .slide-content::-webkit-scrollbar { width: 6px; }
         .slide-content::-webkit-scrollbar-track { background: #f1f1f1; }
         .slide-content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
         .text-shadow { text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
-        
-        /* Анимация бегущей строки */
+
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
         .animate-marquee {
             display: inline-block;
             white-space: nowrap;
             animation: marquee 20s linear infinite;
-        }
-        @keyframes marquee {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
         }
     </style>
 </head>
@@ -58,7 +59,9 @@
         const { useState, useRef, useEffect } = React;
 
         const Icon = ({ name, size = 24, className = "" }) => {
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
+            useEffect(() => {
+                lucide.createIcons();
+            }, [name]);
             return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
         };
 
@@ -66,31 +69,106 @@
             { id: 'tp_chats', title: 'ТП Чаты', icon: 'message-square', pin: '1111', description: 'Поддержка водителей в чатах' },
             { id: 'tp_calls', title: 'ТП Звонки', icon: 'phone', pin: '2222', description: 'Голосовая поддержка' },
             { id: 'op_chats', title: 'ОП Чаты', icon: 'users', pin: '3333', description: 'Продажи в мессенджерах' },
-            { id: 'op_requests', title: 'ОП Заявки', icon: 'file-text', pin: '4444', description: 'Обработка входящих лидов' }
+            { id: 'op_requests', title: 'ОП Заявки', icon: 'file-text', pin: '4444', description: 'Обработка входящих лидов' },
+            { id: 'new_driver', title: 'Новый водитель', icon: 'user-plus', pin: '5555', description: 'Подключение и старт работы' }
         ];
 
+        // Презентации для каждого отдела
+        const PRESENTATIONS = {
+            tp_chats: {
+                slides: ['logo', 'kpi-chats', 'arsenal', 'routing', 'culture-chats', 'schedule-chats', 'team-chats', 'links', 'final'],
+                totalSlides: 9
+            },
+            tp_calls: {
+                slides: ['logo', 'adaptation-calls', 'arsenal', 'routing', 'culture-calls', 'schedule-calls', 'team-calls', 'links', 'final'],
+                totalSlides: 9
+            },
+            op_chats: {
+                slides: ['logo', 'kpi-op-chats', 'arsenal', 'routing-op-chats', 'culture-op-chats', 'schedule-op-chats', 'team-op-chats', 'links-op-chats', 'final'],
+                totalSlides: 9
+            },
+            op_requests: {
+                slides: ['logo', 'kpi-op-requests', 'arsenal', 'culture-op-requests', 'schedule-op-requests', 'team-op-requests', 'links-op-requests', 'final'],
+                totalSlides: 8
+            },
+            new_driver: {
+                slides: ['logo', 'tasks-new-driver', 'schedule-new-driver', 'team-new-driver', 'links-new-driver', 'arsenal', 'final'],
+                totalSlides: 7
+            }
+        };
+
         function App() {
-            const [view, setView] = useState('main');
-            const [selectedDept, setSelectedDept] = useState(null);
+            const loadState = () => {
+                try {
+                    const savedView = localStorage.getItem('staffPortalView');
+                    const savedDeptId = localStorage.getItem('staffPortalDept');
+                    const savedSlide = localStorage.getItem('staffPortalSlide');
+                    
+                    const dept = savedDeptId ? DEPARTMENTS.find(d => d.id === savedDeptId) : null;
+                    const presentation = dept ? PRESENTATIONS[dept.id] : null;
+                    
+                    return {
+                        view: savedView || 'main',
+                        selectedDept: dept,
+                        currentSlide: savedSlide && presentation ? Math.min(parseInt(savedSlide), presentation.totalSlides) : 1
+                    };
+                } catch (e) {
+                    return { view: 'main', selectedDept: null, currentSlide: 1 };
+                }
+            };
+
+            const initialState = loadState();
+            
+            const [view, setView] = useState(initialState.view);
+            const [selectedDept, setSelectedDept] = useState(initialState.selectedDept);
             const [pinInput, setPinInput] = useState('');
             const [error, setError] = useState(false);
-            const [currentSlide, setCurrentSlide] = useState(1);
+            const [currentSlide, setCurrentSlide] = useState(initialState.currentSlide);
             const cheatSheetRef = useRef(null);
-            const totalSlides = 9;
-
-            const handleDeptSelect = (dept) => { setSelectedDept(dept); setView('auth'); setPinInput(''); setError(false); };
-            const goBack = () => { setView('main'); setSelectedDept(null); window.scrollTo({ top: 0, behavior: 'smooth' }); };
             
+            const presentation = selectedDept ? PRESENTATIONS[selectedDept.id] : null;
+            const totalSlides = presentation ? presentation.totalSlides : 9;
+
+            useEffect(() => {
+                localStorage.setItem('staffPortalView', view);
+                if (selectedDept) {
+                    localStorage.setItem('staffPortalDept', selectedDept.id);
+                } else {
+                    localStorage.removeItem('staffPortalDept');
+                }
+                localStorage.setItem('staffPortalSlide', currentSlide.toString());
+            }, [view, selectedDept, currentSlide]);
+
+            const handleDeptSelect = (dept) => { 
+                setSelectedDept(dept); 
+                setView('auth'); 
+                setPinInput(''); 
+                setError(false);
+                setCurrentSlide(1);
+            };
+            
+            const goBack = () => { 
+                setView('main'); 
+                setSelectedDept(null); 
+                window.scrollTo({ top: 0, behavior: 'smooth' }); 
+            };
+
             const handlePinSubmit = (e) => {
                 e.preventDefault();
-                if (pinInput === selectedDept.pin) { setView('content'); setCurrentSlide(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-                else { setError(true); setPinInput(''); }
+                if (pinInput === selectedDept.pin) { 
+                    setView('qcontent'); 
+                    setCurrentSlide(1); 
+                    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+                } else { 
+                    setError(true); 
+                    setPinInput(''); 
+                }
             };
 
             const scrollToSection = (id) => {
                 const element = document.getElementById(id);
                 if (element) {
-                    const offset = 120; // Чтобы заголовок не прятался под липкий хедер
+                    const offset = 120;
                     const bodyRect = document.body.getBoundingClientRect().top;
                     const elementRect = element.getBoundingClientRect().top;
                     const elementPosition = elementRect - bodyRect;
@@ -103,24 +181,76 @@
                 }
             };
 
-            const Presentation = () => (
-                <div className="w-full max-w-6xl mx-auto mb-16 px-4 font-black italic">
-                    <div className="relative overflow-hidden bg-white rounded-[40px] shadow-2xl border border-gray-100 min-h-[720px] flex flex-col">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-gray-100 z-50">
-                            <div className="h-full bg-yellow-400 transition-all duration-300 shadow-[0_0_10px_#facc15]" style={{ width: `${(currentSlide / totalSlides) * 100}%` }}></div>
-                        </div>
+            const scrollToTop = () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
 
-                        <div className="flex-1 p-10 slide-content overflow-y-auto relative">
-                            {currentSlide === 1 && (
+            const Presentation = () => {
+                const slideType = presentation ? presentation.slides[currentSlide - 1] : null;
+
+                const renderSlide = () => {
+                    switch(slideType) {
+                        case 'logo':
+                            return (
                                 <div className="flex flex-col items-center justify-center h-full text-center py-20 animate-in fade-in duration-500">
                                     <div className="absolute top-0 right-0 w-1/2 h-full bg-yellow-400 skew-x-[-15deg] translate-x-32 z-0 opacity-10"></div>
-                                    <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-24 mb-8 relative z-10" />
-                                    <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter text-black relative z-10 leading-none">ГИД <span className="bg-black text-yellow-400 px-4 transform skew-x-[-5deg] inline-block">СВОИ</span><br/>ПОДДЕРЖКИ</h1>
-                                    <p className="mt-8 text-gray-500 font-bold uppercase tracking-[0.2em] relative z-10">Оперативность • Качество • Спокойствие</p>
+                                    <img src="view.png" alt="СВОИ" className="h-24 mb-8 relative z-10" />
+                                    <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter text-black relative z-10 italic">ГИД <span className="bg-black text-yellow-400 px-4">СВОИ</span><br/>ПОДДЕРЖКИ</h1>
+                                    <p className="mt-6 text-gray-500 font-bold italic uppercase tracking-widest relative z-10">Оперативность • Качество • Спокойствие</p>
                                 </div>
-                            )}
+                            );
 
-                            {currentSlide === 2 && (
+                        case 'tasks-new-driver':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-12 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">🎯 Твои задачи</h2>
+                                    
+                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[32px] border-4 border-blue-400 mb-6">
+                                        <div className="flex items-start gap-4 mb-4">
+                                            <div className="bg-blue-600 text-white p-3 rounded-xl"><Icon name="phone" size={32}/></div>
+                                            <div>
+                                                <h4 className="text-xl font-black uppercase mb-2">Обзвон этапов воронки</h4>
+                                                <p className="text-sm text-gray-700 leading-relaxed">
+                                                    Работа с новыми водителями на всех этапах воронки подключения.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-[32px] border-4 border-green-400 mb-6">
+                                        <div className="flex items-start gap-4 mb-4">
+                                            <div className="bg-green-600 text-white p-3 rounded-xl"><Icon name="message-circle" size={32}/></div>
+                                            <div>
+                                                <h4 className="text-xl font-black uppercase mb-2">Коммуникация с таксистами</h4>
+                                                <p className="text-sm text-gray-700 leading-relaxed">
+                                                    Прод-коммуникация с водителями, ориентирование по базовым запросам.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-yellow-50 p-6 rounded-[24px] border-4 border-yellow-400">
+                                            <h4 className="font-black uppercase text-yellow-600 mb-3 text-sm flex items-center gap-2">
+                                                <Icon name="target" size={24}/>
+                                                Цель
+                                            </h4>
+                                            <p className="text-sm font-black text-gray-700">Помощь новым водителям в быстром старте работы в парке</p>
+                                        </div>
+
+                                        <div className="bg-purple-50 p-6 rounded-[24px] border-4 border-purple-400">
+                                            <h4 className="font-black uppercase text-purple-600 mb-3 text-sm flex items-center gap-2">
+                                                <Icon name="users" size={24}/>
+                                                Результат
+                                            </h4>
+                                            <p className="text-sm font-black text-gray-700">Водитель подключён и готов к работе</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'kpi-chats':
+                            return (
                                 <div className="animate-in slide-in-from-right duration-300">
                                     <h2 className="text-3xl font-black uppercase mb-8 border-l-[10px] border-yellow-400 pl-6 underline decoration-black">📈 Твои показатели успеха</h2>
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -151,22 +281,120 @@
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            );
 
-                            {/* СЛАЙД 3: АРСЕНАЛ (ЯРКИЙ) */}
-                            {currentSlide === 3 && (
+                        case 'kpi-op-chats':
+                            return (
                                 <div className="animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-3xl font-black uppercase mb-8 border-l-[10px] border-yellow-400 pl-6 underline decoration-black">📈 Твои показатели успеха</h2>
+
+                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[32px] border-4 border-blue-400 mb-6">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="bg-blue-600 text-white p-3 rounded-xl"><Icon name="clock" size={32}/></div>
+                                            <h4 className="text-xl font-black uppercase">Срок ответа на запрос</h4>
+                                        </div>
+                                        <p className="text-lg font-black text-gray-700 mb-4">Не более <span className="text-blue-600 text-2xl">5-9 минут</span></p>
+                                        <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">
+                                            <p className="text-sm font-black text-gray-700">В первую очередь необходимо уделить внимание разделу <span className="bg-blue-100 px-2 py-1 rounded">«В работе»</span>, так как водители ожидают вашего ответа.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-black text-white p-6 rounded-[32px] space-y-3 shadow-2xl font-black italic">
+                                        <p className="text-yellow-400 uppercase text-[10px] tracking-widest text-center mb-4">Полезные таблицы:</p>
+                                        <a href="https://docs.google.com/spreadsheets/d/1oT04DNfv6-EZY-50prB_zjD20wMAIj-cjMWX3ODy6Pk/edit?gid=520988885#gid=520988885" target="_blank" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>График работы</span> <Icon name="external-link" size={14}/></a>
+                                        <a href="https://docs.google.com/spreadsheets/d/1w8dca4WS9bfCcQk_oldXY2kQrg8bgaYk/edit?usp=sharing" target="_blank" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>Мониторинг 1 группа</span> <Icon name="external-link" size={14}/></a>
+                                        <a href="https://docs.google.com/spreadsheets/d/1_JRy5aGUrxCyQ3TPhShT9gB5r-kHcHOr/edit?usp=sharing" target="_blank" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>Мониторинг 2 группа</span> <Icon name="external-link" size={14}/></a>
+                                        <a href="https://docs.google.com/spreadsheets/d/17bX0FnGQhXNVs7GGs6qCiypqZ4ta7iTB/edit?usp=sharing" target="_blank" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>Мониторинг ночь</span> <Icon name="external-link" size={14}/></a>
+                                        <a href="https://docs.google.com/document/d/14KBMOEbk-EpOgzpX6Jzj28jecjXOJm3fzxgo-NUNYrQ/edit?tab=t.bixlpatt7pai" target="_blank" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>Мотивация</span> <Icon name="external-link" size={14}/></a>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'kpi-op-requests':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-3xl font-black uppercase mb-8 border-l-[10px] border-yellow-400 pl-6 underline decoration-black">📈 Твои показатели успеха</h2>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[32px] border-4 border-blue-400">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className="bg-blue-600 text-white p-3 rounded-xl"><Icon name="phone-incoming" size={32}/></div>
+                                                <h4 className="text-xl font-black uppercase">Обработка трафика</h4>
+                                            </div>
+                                            <p className="text-sm font-black text-gray-700 mb-4">Обработка входящего трафика и оставленных заявок в голосовом режиме.</p>
+                                        </div>
+
+                                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-[32px] border-4 border-green-400">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className="bg-green-600 text-white p-3 rounded-xl"><Icon name="refresh-cw" size={32}/></div>
+                                                <h4 className="text-xl font-black uppercase">Работа с заявками</h4>
+                                            </div>
+                                            <p className="text-sm font-black text-gray-700">Работа с текущими заявками, находящимися в стадиях:</p>
+                                            <div className="mt-3 space-y-2 text-xs font-black">
+                                                <div className="bg-white p-2 rounded-lg border-l-4 border-orange-500">• Поздний звонок</div>
+                                                <div className="bg-white p-2 rounded-lg border-l-4 border-red-500">• Недозвон</div>
+                                                <div className="bg-white p-2 rounded-lg border-l-4 border-yellow-500">• Перезвонить позже</div>
+                                                <div className="bg-white p-2 rounded-lg border-l-4 border-purple-500">• 2 круг</div>
+                                                <div className="bg-white p-2 rounded-lg border-l-4 border-blue-500">• Пропущенный вызов</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-black text-white p-6 rounded-[32px] space-y-3 shadow-2xl font-black italic">
+                                        <p className="text-yellow-400 uppercase text-[10px] tracking-widest text-center mb-4">Полезные таблицы:</p>
+                                        <a href="https://docs.google.com/spreadsheets/d/1oT04DNfv6-EZY-50prB_zjD20wMAIj-cjMWX3ODy6Pk/edit?gid=520988885#gid=520988885" target="_blank" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>График работы</span> <Icon name="external-link" size={14}/></a>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'adaptation-calls':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300">
+                                    <h2 className="text-3xl font-black uppercase mb-8 border-l-[10px] border-yellow-400 pl-6 underline decoration-black">📈 Твои показатели успеха</h2>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-[32px] border-4 border-blue-400">
+                                            <h4 className="text-blue-600 font-black uppercase mb-3 text-sm flex items-center gap-2">
+                                                <Icon name="clock" size={24}/>
+                                                1. Первичная адаптация (2 нед.)
+                                            </h4>
+                                            <div className="space-y-2 text-sm font-black">
+                                                <p className="bg-white p-3 rounded-xl border-l-4 border-blue-500">Неснижаемый KPI — <span className="text-blue-600 text-lg">95%</span></p>
+                                                <p className="bg-white p-3 rounded-xl border-l-4 border-green-500">Оплата обучения: <span className="text-green-600">5000 ₽</span> после 5 отработанных смен</p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-[32px] border-4 border-purple-400">
+                                            <h4 className="text-purple-600 font-black uppercase mb-3 text-sm flex items-center gap-2">
+                                                <Icon name="target" size={24}/>
+                                                2. Окончательная адаптация (1 мес.)
+                                            </h4>
+                                            <div className="space-y-2 text-sm font-black">
+                                                <p className="bg-white p-3 rounded-xl border-l-4 border-green-500">KPI ≥ <span className="text-green-600 text-lg">90%</span> — успешный проход</p>
+                                                <p className="bg-red-50 p-3 rounded-xl border-l-4 border-red-500">KPI &lt; <span className="text-red-600 text-lg">90%</span> — сотрудничество прекращается</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-black text-white p-6 rounded-[32px] space-y-3 shadow-2xl font-black italic">
+                                        <p className="text-yellow-400 uppercase text-[10px] tracking-widest text-center mb-4">Рабочие таблицы:</p>
+                                        <a href="https://docs.google.com/spreadsheets/d/1huOBRKU2MLql9hys-kBqznj7srys_2UwM0CFTdeW0vg/edit?gid=0#gid=0" target="_blank" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>График работы</span> <Icon name="external-link" size={14}/></a>
+                                        <a href="https://docs.google.com/spreadsheets/d/12KUmYw3ZDEoFxR1YdzA53DqWRv9MexkY3EjzTWYvs-g/edit?gid=912213189#gid=912213189" target="_blank" className="flex items-center justify-between bg-white/10 p-3 rounded-xl hover:bg-yellow-400 hover:text-black transition-all"><span>Мониторинг звонков</span> <Icon name="external-link" size={14}/></a>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'arsenal':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
                                     <h2 className="text-4xl font-black uppercase mb-12 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black italic">🛠 Твой Арсенал</h2>
                                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 font-black italic">
                                         <a href="https://svoicrm.ru/stream/?login=yes" target="_blank" className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
                                             <div className="bg-black text-yellow-400 p-6 rounded-3xl mb-4 group-hover:rotate-12 transition-transform inline-block shadow-lg"><Icon name="message-square" size={32}/></div>
-                                            <h4 className="uppercase text-black">Bitrix24</h4>
+                                            <h4 className="uppercase text-black font-black">Bitrix24</h4>
                                             <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2">Основная площадка</p>
                                         </a>
                                         <div className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
                                             <div className="bg-gray-200 text-black p-6 rounded-3xl mb-4 group-hover:rotate-12 transition-transform inline-block shadow-lg"><Icon name="shield-check" size={32}/></div>
-                                            <h4 className="uppercase text-black">DFS</h4>
-                                            <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2 opacity-50">Панель управления</p>
+                                            <h4 className="uppercase text-black font-black">DFS</h4>
+                                            <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2">Панель управления</p>
                                         </div>
                                         <a href="https://svoi.motivity.ru/" target="_blank" className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
                                             <div className="bg-black text-yellow-400 p-6 rounded-3xl mb-4 group-hover:-rotate-12 transition-transform inline-block shadow-lg"><Icon name="book-open" size={32}/></div>
@@ -175,16 +403,16 @@
                                         </a>
                                         <div className="bg-gray-50 p-8 rounded-[40px] border-2 border-transparent hover:border-yellow-400 transition-all text-center group shadow-sm hover:shadow-xl">
                                             <div className="bg-gray-200 text-black p-6 rounded-3xl mb-4 group-hover:-rotate-12 transition-transform inline-block shadow-lg"><Icon name="users" size={32}/></div>
-                                            <h4 className="uppercase text-black">Telegram</h4>
-                                            <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2 opacity-50">Связь с командой</p>
+                                            <h4 className="uppercase text-black font-black">Telegram</h4>
+                                            <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-2">Связь с командой</p>
                                         </div>
                                     </div>
                                     <div className="mt-16 bg-black text-yellow-400 p-5 rounded-full text-center uppercase tracking-[0.2em] text-xs shadow-2xl font-black italic">🚀 Сомневаешься в ответе? Проверь в Твоей Шпаргалке SVOI!</div>
                                 </div>
-                            )}
+                            );
 
-                            {/* СЛАЙД 4: МАРШРУТИЗАЦИЯ */}
-                            {currentSlide === 4 && (
+                        case 'routing':
+                            return (
                                 <div className="animate-in slide-in-from-right duration-300 font-black italic">
                                     <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 italic">🧭 Маршрутизация</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -194,20 +422,85 @@
                                         <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-orange-50/20"><h3 className="text-orange-600 uppercase mb-4 tracking-tighter text-xl underline decoration-orange-200 font-black">Фин. отдел</h3><p className="text-sm leading-relaxed text-gray-600 font-black italic">Ошибки кнопки вывода, пополнение баланса, кейсы по антифроду и ручной перенос баланса.</p></div>
                                     </div>
                                 </div>
-                            )}
+                            );
 
-                            {/* СЛАЙД 5: КУЛЬТУРА ОБЩЕНИЯ - ОБНОВЛЕНО */}
-                            {currentSlide === 5 && (
+                        case 'routing-op-chats':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 italic">🧭 Маршрутизация</h2>
+                                    
+                                    <div className="bg-red-50 p-8 rounded-[32px] border-4 border-red-400 mb-6">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="bg-red-600 text-white p-3 rounded-xl"><Icon name="alert-triangle" size={32}/></div>
+                                            <h4 className="text-xl font-black uppercase">Проблема с блокировкой WhatsApp</h4>
+                                        </div>
+                                        <p className="text-sm font-black text-gray-700 mb-4">При отправке сообщения водителю приходит ошибка:</p>
+                                        <div className="bg-white p-4 rounded-xl border-2 border-red-300">
+                                            <p className="text-sm font-black text-red-600 font-mono">=== SYSTEM WZ ===<br/>Сообщение не отправлено: канал забанен</p>
+                                        </div>
+                                        <div className="bg-red-100 p-4 rounded-xl mt-4 border-l-4 border-red-500">
+                                            <p className="text-sm font-black text-gray-700">Менеджеру чатов ОП необходимо <span className="text-red-600 underline">передать чат на звонок</span>, чтобы не потерять водителя.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                        <div className="bg-green-50 p-6 rounded-[24px] border-4 border-green-400">
+                                            <h4 className="font-black uppercase text-green-600 mb-3 text-sm flex items-center gap-2">
+                                                <Icon name="check-circle" size={24}/>
+                                                Обрабатываем сами
+                                            </h4>
+                                            <div className="space-y-2 text-sm font-black">
+                                                <div className="bg-white p-3 rounded-xl border-l-4 border-green-500">Консультация водителя перед подключением</div>
+                                                <div className="bg-white p-3 rounded-xl border-l-4 border-green-500">Смена авто после передачи от ТП</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-orange-50 p-6 rounded-[24px] border-4 border-orange-400">
+                                            <h4 className="font-black uppercase text-orange-600 mb-3 text-sm flex items-center gap-2">
+                                                <Icon name="arrow-right" size={24}/>
+                                                Переводим на ТП
+                                            </h4>
+                                            <div className="space-y-2 text-sm font-black">
+                                                <div className="bg-white p-3 rounded-xl border-l-4 border-orange-500">Водитель подключён, интересуется бонусом 4500 ₽ (нужно проверить кол-во поездок)</div>
+                                                <div className="bg-white p-3 rounded-xl border-l-4 border-orange-500">Вопрос по лимиту вывода денежных средств</div>
+                                                <div className="bg-white p-3 rounded-xl border-l-4 border-orange-500">Вопрос по промокоду и приоритету</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-blue-50 p-6 rounded-[24px] border-4 border-blue-400">
+                                        <h4 className="font-black uppercase text-blue-600 mb-3 text-sm flex items-center gap-2">
+                                            <Icon name="info" size={24}/>
+                                            Важно
+                                        </h4>
+                                        <p className="text-sm font-black text-gray-700">Все чаты с рассылок приходят менеджерам чатов ОП. Необходимо понимать, что обрабатываем мы, а что переводим на техподдержку.</p>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'routing-op-requests':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 italic">🧭 Маршрутизация</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-blue-50/20"><h3 className="text-blue-600 uppercase mb-4 tracking-tighter text-xl underline decoration-blue-200">Оставляем в ТП</h3><p className="text-sm leading-relaxed text-gray-600 italic">Смена типа оплаты, вывод денег, лицензии и разрешения, проверка авто под тарифы парка.</p></div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-red-50/20"><h3 className="text-red-600 uppercase mb-4 tracking-tighter text-xl underline decoration-red-200">Яндекс Поддержка</h3><p className="text-sm leading-relaxed text-gray-600 italic">Неоплата заказов, жалобы на пассажиров, ошибки Яндекс Про, изменения ФИО в приложении.</p></div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-purple-50/20 font-black"><h3 className="text-purple-600 uppercase mb-4 tracking-tighter text-xl underline decoration-purple-200">РГ / Старшие</h3><p className="text-sm leading-relaxed text-gray-600 font-black italic">Повышение лимита до 30 000 ₽, серьезные конфликты, технические сбои и неординарные кейсы.</p></div>
+                                        <div className="p-8 border-4 border-gray-100 rounded-[40px] bg-orange-50/20"><h3 className="text-orange-600 uppercase mb-4 tracking-tighter text-xl underline decoration-orange-200 font-black">Фин. отдел</h3><p className="text-sm leading-relaxed text-gray-600 font-black italic">Ошибки кнопки вывода, пополнение баланса, кейсы по антифроду и ручной перенос баланса.</p></div>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'culture-chats':
+                            return (
                                 <div className="flex flex-col items-center animate-in slide-in-from-right duration-300 font-black italic">
                                     <h2 className="text-4xl font-black uppercase mb-12 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">💬 Культура общения</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full italic">
                                         <div className="space-y-4">
                                             <p className="text-green-500 font-black uppercase text-[10px] tracking-widest mb-2 italic">МЫ ВСЕГДА:</p>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight">• Общаемся на «Вы»</div>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight">• Сохраняем деловой стиль</div>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight">• Проверяем орфографию</div>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight">• Не пишем длинные текста</div>
-                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight">• Отвечаем строго по делу</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight font-black italic">• Общаемся на «Вы»</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight font-black italic">• Сохраняем деловой стиль</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight font-black italic">• Проверяем орфографию</div>
                                         </div>
                                         <div className="space-y-4 opacity-70">
                                             <p className="text-red-500 font-black uppercase text-[10px] tracking-widest mb-2 italic">КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:</p>
@@ -219,151 +512,579 @@
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            );
 
-                            {/* СЛАЙД 6: РЕЖИМ СМЕНЫ */}
-                            {currentSlide === 6 && (
+                        case 'culture-op-chats':
+                            return (
+                                <div className="flex flex-col items-center animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-12 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">💬 Культура общения</h2>
+                                    
+                                    <div className="space-y-6 w-full max-w-4xl">
+                                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[32px] border-4 border-blue-400">
+                                            <h4 className="text-blue-600 font-black uppercase mb-4 text-sm flex items-center gap-2">
+                                                <Icon name="check-square" size={24}/>
+                                                По правилам переписки необходимо:
+                                            </h4>
+                                            <div className="space-y-3 text-sm font-black">
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">• Начинать каждое новое предложение с новой строки с заглавной буквы</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">• Следить за отсутствием лишних пробелов перед точкой, запятой, слэшем</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">• Следить за присутствием пробела после запятой, точки, дефиса</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">• В переписках мы все соблюдаем нормы этикета и сервиса, недопустимы хамство, пассивная агрессия, попытка выставить водителя неправым</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-[32px] border-4 border-green-400">
+                                            <h4 className="text-green-600 font-black uppercase mb-4 text-sm flex items-center gap-2">
+                                                <Icon name="heart" size={24}/>
+                                                Сервис и поддержка
+                                            </h4>
+                                            <div className="space-y-3 text-sm font-black">
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">• Мы не делаем замечания водителям, если они не переходят нормы корректного общения</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">• Если водитель что-то переспросил, недопонял, не увидел — мы обязаны просто дать повторный ответ, чуть перефразировав предыдущий</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-8 rounded-[32px] border-4 border-yellow-400">
+                                            <h4 className="text-yellow-600 font-black uppercase mb-4 text-sm flex items-center gap-2">
+                                                <Icon name="star" size={24}/>
+                                                Позитивный настрой
+                                            </h4>
+                                            <div className="space-y-3 text-sm font-black">
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-yellow-500">• Основная задача — создать благонадежный образ компании, заточенной под сервис</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-yellow-500">• Отказываемся от употребления частицы «не» в ответах клиенту</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">
+                                                    <p className="mb-2">Пример:</p>
+                                                    <p className="text-red-500 line-through opacity-50">«Не знаем»</p>
+                                                    <p className="text-green-600">«Комиссия Яндекса зависит от региона и города, свою комиссию вы можете увидеть уже после первого заказа»</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-red-50 p-6 rounded-[24px] border-4 border-red-400">
+                                            <h4 className="text-red-600 font-black uppercase mb-3 text-sm flex items-center gap-2">
+                                                <Icon name="alert-circle" size={24}/>
+                                                Важно
+                                            </h4>
+                                            <p className="text-sm font-black text-gray-700">Не нужно у клиента спрашивать то, что было озвучено им ранее, дублировать переписку, задавать одни и те же вопросы.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'culture-op-requests':
+                            return (
+                                <div className="flex flex-col items-center animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-12 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">💬 Культура общения</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full italic">
+                                        <div className="space-y-4">
+                                            <p className="text-green-500 font-black uppercase text-[10px] tracking-widest mb-2 italic">МЫ ВСЕГДА:</p>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight font-black italic">• Общаемся на «Вы»</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight font-black italic">• Сохраняем деловой стиль</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight font-black italic">• Проверяем орфографию</div>
+                                        </div>
+                                        <div className="space-y-4 opacity-70">
+                                            <p className="text-red-500 font-black uppercase text-[10px] tracking-widest mb-2 italic">КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:</p>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Метафоры / Юмор</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Хамство и грубость</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Закрывать чат без решения</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Спорить</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Общаться как с другом</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'culture-calls':
+                            return (
+                                <div className="flex flex-col items-center animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-12 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">💬 Культура общения</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full italic">
+                                        <div className="space-y-4">
+                                            <p className="text-green-500 font-black uppercase text-[10px] tracking-widest mb-2 italic">МЫ ВСЕГДА:</p>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight font-black italic">• Общаемся на «Вы»</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-green-500 text-lg shadow-sm tracking-tight font-black italic">• Сохраняем деловой стиль</div>
+                                        </div>
+                                        <div className="space-y-4 opacity-70">
+                                            <p className="text-red-500 font-black uppercase text-[10px] tracking-widest mb-2 italic">КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:</p>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Метафоры / Юмор</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Хамство и грубость</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Спорить</div>
+                                            <div className="p-4 bg-gray-50 rounded-[30px] border-l-8 border-red-500 text-lg leading-none font-black italic">• Общаться как с другом</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'schedule-chats':
+                            return (
                                 <div className="flex flex-col items-center justify-center h-full animate-in slide-in-from-right duration-300 font-black italic">
                                     <h2 className="text-4xl font-black uppercase mb-16 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">📋 Режим смены</h2>
                                     <div className="space-y-12 w-full max-w-xl">
-                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4"><div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">08:59</div><div className="text-2xl uppercase tracking-tighter">СТАРТ В BITRIX24</div></div>
-                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4"><div className="bg-yellow-400 text-black p-6 rounded-[30px] w-32 text-center shadow-xl text-2xl uppercase font-black italic">ПЕРЕРЫВ</div><div className="text-2xl leading-tight uppercase font-black">2 ПО 30 МИНУТ <br/><span className="text-gray-400 text-sm italic">+ 3 ПО 10 МИНУТ</span></div></div>
-                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4"><div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">21:00</div><div className="text-2xl uppercase tracking-tighter text-shadow">ФИНИШ СМЕНЫ</div></div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4">
+                                            <div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">08:59</div>
+                                            <div className="text-2xl uppercase tracking-tighter font-black italic">СТАРТ В BITRIX24</div>
+                                        </div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4">
+                                            <div className="bg-yellow-400 text-black p-6 rounded-[30px] w-32 text-center shadow-xl flex items-center justify-center">
+                                                <span className="text-2xl uppercase font-black italic">ПЕРЕРЫВ</span>
+                                            </div>
+                                            <div className="text-2xl leading-tight uppercase font-black">
+                                                2 ПО 30 МИНУТ <br/><span className="text-gray-400 text-sm italic">+ 3 ПО 10 МИНУТ</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4">
+                                            <div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">21:00</div>
+                                            <div className="text-2xl uppercase tracking-tighter text-shadow font-black italic">ФИНИШ СМЕНЫ</div>
+                                        </div>
                                     </div>
                                 </div>
-                            )}
+                            );
 
-                            {/* СЛАЙД 7: КОМАНДА */}
-                            {currentSlide === 7 && (
-                                <div className="animate-in slide-in-from-right duration-300 font-black italic font-black">
+                        case 'schedule-op-chats':
+                            return (
+                                <div className="flex flex-col items-center justify-center h-full animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-16 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">📋 Режим смены</h2>
+                                    <div className="space-y-12 w-full max-w-xl">
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4">
+                                            <div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">08:59</div>
+                                            <div className="text-2xl uppercase tracking-tighter font-black italic">СТАРТ В BITRIX24</div>
+                                        </div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4">
+                                            <div className="bg-yellow-400 text-black p-6 rounded-[30px] w-32 text-center shadow-xl flex items-center justify-center">
+                                                <span className="text-2xl uppercase font-black italic">ПЕРЕРЫВ</span>
+                                            </div>
+                                            <div className="text-2xl leading-tight uppercase font-black">
+                                                2 × 30 МИН <br/><span className="text-gray-400 text-sm italic">+ 3 × 10 МИН ИЛИ 4 × 5 МИН</span>
+                                            </div>
+                                        </div>
+                                        <div className="bg-white/50 p-6 rounded-[24px] border-2 border-gray-300">
+                                            <p className="text-sm font-black text-gray-700 italic">⚠ Замена смены: уведомляй руководителя минимум за 3 дня</p>
+                                        </div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4">
+                                            <div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">21:00</div>
+                                            <div className="text-2xl uppercase tracking-tighter text-shadow font-black italic">ФИНИШ СМЕНЫ</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'schedule-op-requests':
+                            return (
+                                <div className="flex flex-col items-center justify-center h-full animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-16 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">📋 Режим смены</h2>
+
+                                    <div className="space-y-8 w-full max-w-2xl">
+                                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-[32px] border-4 border-green-400">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className="bg-green-600 text-white p-3 rounded-xl"><Icon name="clock" size={32}/></div>
+                                                <h4 className="text-xl font-black uppercase">График работы</h4>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">
+                                                    <p className="text-[10px] text-green-600 uppercase mb-1">Начало</p>
+                                                    <p className="text-2xl font-black">09:00 МСК</p>
+                                                </div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">
+                                                    <p className="text-[10px] text-green-600 uppercase mb-1">Конец</p>
+                                                    <p className="text-2xl font-black">21:00 МСК</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[32px] border-4 border-blue-400">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className="bg-blue-600 text-white p-3 rounded-xl"><Icon name="coffee" size={32}/></div>
+                                                <h4 className="text-xl font-black uppercase">Перерывы</h4>
+                                            </div>
+                                            <div className="space-y-3 text-sm font-black">
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">• Два перерыва по 30 минут</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">• Два перерыва по 15 минут в любое удобное время</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">• Перерывы можно брать в любое время, кроме первого и последнего часов работы</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-red-50 p-6 rounded-[24px] border-4 border-red-400">
+                                            <h4 className="font-black uppercase text-red-600 mb-3 text-sm flex items-center gap-2">
+                                                <Icon name="alert-circle" size={24}/>
+                                                Важно
+                                            </h4>
+                                            <div className="space-y-2 text-sm font-black">
+                                                <div className="bg-white p-3 rounded-xl border-l-4 border-red-500">❌ Нельзя уходить с 09:00 до 10:00</div>
+                                                <div className="bg-white p-3 rounded-xl border-l-4 border-red-500">❌ Нельзя уходить с 20:00 до 21:00</div>
+                                                <div className="bg-white p-3 rounded-xl border-l-4 border-orange-500">⚠ Отдых организуется не параллельно с коллегами по линии (уходим по очереди)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'schedule-new-driver':
+                            return (
+                                <div className="flex flex-col items-center justify-center h-full animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-16 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">📋 Режим смены</h2>
+
+                                    <div className="space-y-8 w-full max-w-2xl">
+                                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-[32px] border-4 border-green-400">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className="bg-green-600 text-white p-3 rounded-xl"><Icon name="clock" size={32}/></div>
+                                                <h4 className="text-xl font-black uppercase">График работы</h4>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">
+                                                    <p className="text-[10px] text-green-600 uppercase mb-1">Начало</p>
+                                                    <p className="text-2xl font-black">09:00 МСК</p>
+                                                </div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">
+                                                    <p className="text-[10px] text-green-600 uppercase mb-1">Конец</p>
+                                                    <p className="text-2xl font-black">21:00 МСК</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[32px] border-4 border-blue-400">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className="bg-blue-600 text-white p-3 rounded-xl"><Icon name="coffee" size={32}/></div>
+                                                <h4 className="text-xl font-black uppercase">Перерывы</h4>
+                                            </div>
+                                            <div className="space-y-3 text-sm font-black">
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">• Два перерыва по 30 минут</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">• Два перерыва по 15 минут</div>
+                                                <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">• Перерывы можно брать в любое удобное время</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'team-new-driver':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black italic">👥 Твоя поддержка</h2>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 font-black italic">
+                                        {[
+                                            { name: "Чебыкин Пётр", role: "РОП", handle: "@pierrefatale", url: "https://t.me/pierrefatale", type: "gold" },
+                                            { name: "Мешкова Ангелина", role: "РО обучения", handle: "@mOorgenstern", url: "https://t.me/mOorgenstern", type: "gold" },
+                                            { name: "Елизавета Манухова", role: "Руководитель группы", handle: "@Saicowow", url: "https://t.me/Saicowow", type: "gold" },
+                                            { name: "Поспелова Анастасия", role: "Бизнес-тренер", handle: "@the_aleksandrova", url: "https://t.me/the_aleksandrova", type: "white" },
+                                            { name: "Домрачева Дарья", role: "Бизнес-тренер", handle: "@Kewassi", url: "https://t.me/Kewassi", type: "white" },
+                                            { name: "Коноваленко Ирина", role: "Бизнес-тренер", handle: "@RiKokoko", url: "https://t.me/RiKokoko", type: "white" }
+                                        ].map((p, i) => (
+                                            <div key={i} className={`p-6 rounded-[32px] border-b-8 shadow-sm transition-all hover:shadow-xl ${p.type === 'gold' ? 'border-yellow-400 bg-gray-50' : 'border-gray-100 bg-white'}`}>
+                                                <p className="font-black text-black uppercase text-sm leading-tight mb-1 italic">{p.name}</p>
+                                                <p className="text-[8px] text-gray-400 uppercase mb-4 tracking-widest opacity-50 italic">{p.role}</p>
+                                                <a href={p.url} target="_blank" className="bg-black text-yellow-400 px-4 py-2 rounded-xl text-[10px] font-black inline-block hover:bg-yellow-400 hover:text-black transition-all shadow-md italic">@{p.handle.replace('@','')}</a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+
+                        case 'links-new-driver':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 italic">🔗 Полезные ссылки</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {[
+                                            { name: 'Комиссия парка', url: 'https://svoi.motivity.ru/study/lessons/178' },
+                                            { name: 'Диспетчерская', url: 'https://svoi.motivity.ru/study/lessons/55' },
+                                            { name: 'Bitrix24', url: 'https://svoi.motivity.ru/study/lessons/76' },
+                                            { name: 'Отработка негатива и жалоб', url: 'https://svoi.motivity.ru/study/lessons/312' },
+                                            { name: 'Самозанятость', url: 'https://svoi.motivity.ru/study/lessons/147' },
+                                            { name: 'ИП', url: 'https://svoi.motivity.ru/study/lessons/169' },
+                                            { name: 'Тренажер Яндекс Про', url: 'https://svoi.motivity.ru/study/lessons/116' },
+                                            { name: 'Классификатор', url: 'https://svoi.motivity.ru/study/lessons/113' }
+                                        ].map((item, idx) => (
+                                            <a key={idx} href={item.url} target="_blank" className="p-6 bg-gray-50 rounded-[32px] border-2 border-gray-50 hover:border-yellow-400 hover:bg-white flex justify-between items-center group transition-all shadow-lg hover:shadow-xl">
+                                                <span className="text-black uppercase text-sm tracking-tighter font-black">{item.name}</span> <Icon name="external-link" size={20} className="text-yellow-500 opacity-30 group-hover:opacity-100" />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+
+                        case 'schedule-calls':
+                            return (
+                                <div className="flex flex-col items-center justify-center h-full animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-4xl font-black uppercase mb-16 self-start border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black">📋 Режим смены</h2>
+                                    <div className="space-y-12 w-full max-w-xl">
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4">
+                                            <div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">09:00</div>
+                                            <div className="text-2xl uppercase tracking-tighter font-black italic">СТАРТ СМЕНЫ</div>
+                                        </div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4">
+                                            <div className="bg-yellow-400 text-black p-6 rounded-[30px] w-32 text-center shadow-xl flex items-center justify-center">
+                                                <span className="text-2xl uppercase font-black italic">ПЕРЕРЫВ</span>
+                                            </div>
+                                            <div className="text-2xl leading-tight uppercase font-black">
+                                                2 × 30 МИН <br/><span className="text-gray-400 text-sm italic">+ 2 × 15 МИН + 10 МИН</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-10 items-center group transition-transform hover:translate-x-4">
+                                            <div className="bg-black text-yellow-400 p-6 rounded-[30px] w-32 text-center shadow-xl text-3xl font-black italic">21:00</div>
+                                            <div className="text-2xl uppercase tracking-tighter text-shadow font-black italic">ФИНИШ СМЕНЫ</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+
+                        case 'team-chats':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
                                     <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black italic">👥 Твоя поддержка</h2>
                                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 font-black italic">
                                         {[
                                             { name: "Данил Брюхин", role: "РО Клиентский сервис", handle: "@d_breww", url: "https://t.me/d_breww", type: "gold" },
                                             { name: "Ангелина Мешкова", role: "РО Обучения", handle: "@mOorgenstern", url: "https://t.me/mOorgenstern", type: "gold" },
-                                            { name: "Анастасия Поспелова", role: "Бизнес тренер", handle: "@the_aleksandrova", url: "https://t.me/the_aleksandrova", type: "white" },
-                                            { name: "Дарья Домрачева", role: "Бизнес тренер", handle: "@Kewassi", url: "https://t.me/Kewassi", type: "white" },
-                                            { name: "Ирина Коноваленко", role: "Бизнес тренер", handle: "@RiKokoko", url: "https://t.me/RiKokoko", type: "white" },
+                                            { name: "Анастасия Поспелова", role: "Бизнес-тренер", handle: "@the_aleksandrova", url: "https://t.me/the_aleksandrova", type: "white" },
+                                            { name: "Дарья Домрачева", role: "Бизнес-тренер", handle: "@Kewassi", url: "https://t.me/Kewassi", type: "white" },
+                                            { name: "Ирина Коноваленко", role: "Бизнес-тренер", handle: "@RiKokoko", url: "https://t.me/RiKokoko", type: "white" },
                                             { name: "Дмитрий Черевко", role: "РГ", handle: "@dmitriy_svoi", url: "https://t.me/dmitriy_svoi", type: "gold" },
                                             { name: "Дмитрий Щеглов", role: "РГ", handle: "@Shcheglov_98", url: "https://t.me/Shcheglov_98", type: "gold" }
                                         ].map((p, i) => (
                                             <div key={i} className={`p-6 rounded-[32px] border-b-8 shadow-sm transition-all hover:shadow-xl ${p.type === 'gold' ? 'border-yellow-400 bg-gray-50' : 'border-gray-100 bg-white'}`}>
-                                                <p className="font-black text-black uppercase text-sm leading-tight mb-1 italic italic font-black">{p.name}</p>
-                                                <p className="text-[8px] text-gray-400 uppercase mb-4 tracking-widest font-black opacity-50 italic">{p.role}</p>
-                                                <a href={p.url} target="_blank" className="bg-black text-yellow-400 px-4 py-2 rounded-xl text-[10px] font-black inline-block hover:bg-yellow-400 hover:text-black transition-all shadow-md italic font-black italic">@{p.handle.replace('@','')}</a>
+                                                <p className="font-black text-black uppercase text-sm leading-tight mb-1 italic">{p.name}</p>
+                                                <p className="text-[8px] text-gray-400 uppercase mb-4 tracking-widest opacity-50 italic">{p.role}</p>
+                                                <a href={p.url} target="_blank" className="bg-black text-yellow-400 px-4 py-2 rounded-xl text-[10px] font-black inline-block hover:bg-yellow-400 hover:text-black transition-all shadow-md italic">@{p.handle.replace('@','')}</a>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
-                            )}
+                            );
 
-                            {/* СЛАЙД 8: MOTIVITY */}
-                            {currentSlide === 8 && (
+                        case 'team-op-chats':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black italic">👥 Твоя поддержка</h2>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 font-black italic">
+                                        {[
+                                            { name: "Чебыкин Пётр", role: "РОП", handle: "@pierrefatale", url: "https://t.me/pierrefatale", type: "gold" },
+                                            { name: "Валерия Разумова", role: "Руководитель группы", handle: "@qpfppmq", url: "https://t.me/qpfppmq", type: "gold" },
+                                            { name: "Диана Рабий", role: "Руководитель группы", handle: "@DianaRabiy", url: "https://t.me/DianaRabiy", type: "gold" },
+                                            { name: "Мешкова Ангелина", role: "РО обучения", handle: "@mOorgenstern", url: "https://t.me/mOorgenstern", type: "gold" },
+                                            { name: "Поспелова Анастасия", role: "Бизнес-тренер", handle: "@the_aleksandrova", url: "https://t.me/the_aleksandrova", type: "white" },
+                                            { name: "Домрачева Дарья", role: "Бизнес-тренер", handle: "@Kewassi", url: "https://t.me/Kewassi", type: "white" },
+                                            { name: "Коноваленко Ирина", role: "Бизнес-тренер", handle: "@RiKokoko", url: "https://t.me/RiKokoko", type: "white" }
+                                        ].map((p, i) => (
+                                            <div key={i} className={`p-6 rounded-[32px] border-b-8 shadow-sm transition-all hover:shadow-xl ${p.type === 'gold' ? 'border-yellow-400 bg-gray-50' : 'border-gray-100 bg-white'}`}>
+                                                <p className="font-black text-black uppercase text-sm leading-tight mb-1 italic">{p.name}</p>
+                                                <p className="text-[8px] text-gray-400 uppercase mb-4 tracking-widest opacity-50 italic">{p.role}</p>
+                                                <a href={p.url} target="_blank" className="bg-black text-yellow-400 px-4 py-2 rounded-xl text-[10px] font-black inline-block hover:bg-yellow-400 hover:text-black transition-all shadow-md italic">@{p.handle.replace('@','')}</a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+
+                        case 'team-op-requests':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black italic">👥 Твоя поддержка</h2>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 font-black italic">
+                                        {[
+                                            { name: "Чебыкин Пётр", role: "РОП", handle: "@pierrefatale", url: "https://t.me/pierrefatale", type: "gold" },
+                                            { name: "Коноваленко Анастасия", role: "Руководитель группы", handle: "@Ny_Visn", url: "https://t.me/Ny_Visn", type: "gold" },
+                                            { name: "Мешкова Ангелина", role: "РО обучения", handle: "@mOorgenstern", url: "https://t.me/mOorgenstern", type: "gold" },
+                                            { name: "Поспелова Анастасия", role: "Бизнес-тренер", handle: "@the_aleksandrova", url: "https://t.me/the_aleksandrova", type: "white" },
+                                            { name: "Домрачева Дарья", role: "Бизнес-тренер", handle: "@Kewassi", url: "https://t.me/Kewassi", type: "white" },
+                                            { name: "Коноваленко Ирина", role: "Бизнес-тренер", handle: "@RiKokoko", url: "https://t.me/RiKokoko", type: "white" }
+                                        ].map((p, i) => (
+                                            <div key={i} className={`p-6 rounded-[32px] border-b-8 shadow-sm transition-all hover:shadow-xl ${p.type === 'gold' ? 'border-yellow-400 bg-gray-50' : 'border-gray-100 bg-white'}`}>
+                                                <p className="font-black text-black uppercase text-sm leading-tight mb-1 italic">{p.name}</p>
+                                                <p className="text-[8px] text-gray-400 uppercase mb-4 tracking-widest opacity-50 italic">{p.role}</p>
+                                                <a href={p.url} target="_blank" className="bg-black text-yellow-400 px-4 py-2 rounded-xl text-[10px] font-black inline-block hover:bg-yellow-400 hover:text-black transition-all shadow-md italic">@{p.handle.replace('@','')}</a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+
+                        case 'team-calls':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 font-black italic">👥 Твоя поддержка</h2>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 font-black italic">
+                                        {[
+                                            { name: "Брюхин Даниил", role: "РО Клиентский сервис", handle: "@d_breww", url: "https://t.me/d_breww", type: "gold" },
+                                            { name: "Клинковая Алёна", role: "Руководитель группы", handle: "@Klinkova76", url: "https://t.me/Klinkova76", type: "gold" },
+                                            { name: "Мешкова Ангелина", role: "РО обучения", handle: "@mOorgenstern", url: "https://t.me/mOorgenstern", type: "gold" },
+                                            { name: "Поспелова Анастасия", role: "Бизнес-тренер", handle: "@the_aleksandrova", url: "https://t.me/the_aleksandrova", type: "white" },
+                                            { name: "Домрачева Дарья", role: "Бизнес-тренер", handle: "@Kewassi", url: "https://t.me/Kewassi", type: "white" },
+                                            { name: "Коноваленко Ирина", role: "Бизнес-тренер", handle: "@RiKokoko", url: "https://t.me/RiKokoko", type: "white" }
+                                        ].map((p, i) => (
+                                            <div key={i} className={`p-6 rounded-[32px] border-b-8 shadow-sm transition-all hover:shadow-xl ${p.type === 'gold' ? 'border-yellow-400 bg-gray-50' : 'border-gray-100 bg-white'}`}>
+                                                <p className="font-black text-black uppercase text-sm leading-tight mb-1 italic">{p.name}</p>
+                                                <p className="text-[8px] text-gray-400 uppercase mb-4 tracking-widest opacity-50 italic">{p.role}</p>
+                                                <a href={p.url} target="_blank" className="bg-black text-yellow-400 px-4 py-2 rounded-xl text-[10px] font-black inline-block hover:bg-yellow-400 hover:text-black transition-all shadow-md italic">@{p.handle.replace('@','')}</a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+
+                        case 'links':
+                            return (
                                 <div className="animate-in slide-in-from-right duration-300 font-black italic">
                                     <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 italic">🔗 Полезные ссылки</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {[
                                             { name: 'Урок: Диспетчерская (DFS)', url: 'https://svoi.motivity.ru/study/lessons/55' },
-                                            { name: 'Урок: Bitrix24 Контакт-центр', url: 'https://svoi.motivity.ru/study/lessons/76' },
-                                            { name: 'Отработка негатива и возражений', url: 'https://svoi.motivity.ru/study/lessons/312' },
-                                            { name: 'Финансовый регламент выплат', url: 'https://svoi.motivity.ru/library/file/377' },
-                                            { name: 'Самозанятость и ИП в такси', url: 'https://svoi.motivity.ru/study/lessons/169' },
-                                            { name: 'Тренажер: Интерфейс Яндекс Про', url: 'https://svoi.motivity.ru/study/lessons/116' },
+                                            { name: 'Урок: Bitrix24', url: 'https://svoi.motivity.ru/study/lessons/76' },
+                                            { name: 'Отработка негатива', url: 'https://svoi.motivity.ru/study/lessons/312' },
+                                            { name: 'Финансовый регламент', url: 'https://svoi.motivity.ru/library/file/377' },
+                                            { name: 'Самозанятость и ИП', url: 'https://svoi.motivity.ru/study/lessons/169' },
+                                            { name: 'Тренажер Яндекс Про', url: 'https://svoi.motivity.ru/study/lessons/116' },
                                             { name: 'Смена автомобиля в парке', url: 'https://svoi.motivity.ru/library/file/263' },
                                             { name: 'Классификатор', url: 'https://svoi.motivity.ru/study/lessons/113' }
                                         ].map((item, idx) => (
-                                            <a key={idx} href={item.url} target="_blank" className="p-5 bg-gray-50 rounded-[24px] border-2 border-gray-50 hover:border-yellow-400 hover:bg-white flex justify-between group transition-all shadow-sm font-black italic">
-                                                <span className="text-black uppercase text-[10px] tracking-tighter">{item.name}</span> <Icon name="external-link" size={16} className="text-yellow-500 opacity-30 group-hover:opacity-100" />
+                                            <a key={idx} href={item.url} target="_blank" className="p-6 bg-gray-50 rounded-[32px] border-2 border-gray-50 hover:border-yellow-400 hover:bg-white flex justify-between items-center group transition-all shadow-lg hover:shadow-xl">
+                                                <span className="text-black uppercase text-sm tracking-tighter font-black">{item.name}</span> <Icon name="external-link" size={20} className="text-yellow-500 opacity-30 group-hover:opacity-100" />
                                             </a>
                                         ))}
                                     </div>
                                 </div>
-                            )}
+                            );
 
-                            {/* СЛАЙД 9: МЕНЮ ШПАРГАЛКИ (ОБНОВЛЕНО ПО СКРИНШОТУ) */}
-                            {currentSlide === 9 && (
-                                <div className="flex flex-col items-center justify-start h-full text-center bg-yellow-400 rounded-[40px] p-8 shadow-2xl relative overflow-hidden animate-in zoom-in duration-500 italic font-black font-black italic">
+                        case 'links-op-chats':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 italic">🔗 Полезные ссылки</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {[
+                                            { name: 'Комиссия парка', url: 'https://svoi.motivity.ru/study/lessons/178' },
+                                            { name: 'Диспетчерская', url: 'https://svoi.motivity.ru/study/lessons/55' },
+                                            { name: 'Bitrix24', url: 'https://svoi.motivity.ru/study/lessons/76' },
+                                            { name: 'Отработка негатива и жалоб', url: 'https://svoi.motivity.ru/study/lessons/312' },
+                                            { name: 'Самозанятость', url: 'https://svoi.motivity.ru/study/lessons/147' },
+                                            { name: 'ИП', url: 'https://svoi.motivity.ru/study/lessons/169' },
+                                            { name: 'Тренажер Яндекс Про', url: 'https://svoi.motivity.ru/study/lessons/116' },
+                                            { name: 'Классификатор', url: 'https://svoi.motivity.ru/study/lessons/113' }
+                                        ].map((item, idx) => (
+                                            <a key={idx} href={item.url} target="_blank" className="p-6 bg-gray-50 rounded-[32px] border-2 border-gray-50 hover:border-yellow-400 hover:bg-white flex justify-between items-center group transition-all shadow-lg hover:shadow-xl">
+                                                <span className="text-black uppercase text-sm tracking-tighter font-black">{item.name}</span> <Icon name="external-link" size={20} className="text-yellow-500 opacity-30 group-hover:opacity-100" />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+
+                        case 'links-op-requests':
+                            return (
+                                <div className="animate-in slide-in-from-right duration-300 font-black italic">
+                                    <h2 className="text-3xl font-black uppercase mb-10 border-l-[10px] border-yellow-400 pl-6 underline decoration-black decoration-4 italic">🔗 Полезные ссылки</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {[
+                                            { name: 'Урок: Диспетчерская (DFS)', url: 'https://svoi.motivity.ru/study/lessons/55' },
+                                            { name: 'Урок: Bitrix24', url: 'https://svoi.motivity.ru/study/lessons/76' },
+                                            { name: 'Отработка негатива', url: 'https://svoi.motivity.ru/study/lessons/312' },
+                                            { name: 'Финансовый регламент', url: 'https://svoi.motivity.ru/library/file/377' },
+                                            { name: 'Самозанятость и ИП', url: 'https://svoi.motivity.ru/study/lessons/169' },
+                                            { name: 'Тренажер Яндекс Про', url: 'https://svoi.motivity.ru/study/lessons/116' },
+                                            { name: 'Смена автомобиля в парке', url: 'https://svoi.motivity.ru/library/file/263' },
+                                            { name: 'Классификатор', url: 'https://svoi.motivity.ru/study/lessons/113' }
+                                        ].map((item, idx) => (
+                                            <a key={idx} href={item.url} target="_blank" className="p-6 bg-gray-50 rounded-[32px] border-2 border-gray-50 hover:border-yellow-400 hover:bg-white flex justify-between items-center group transition-all shadow-lg hover:shadow-xl">
+                                                <span className="text-black uppercase text-sm tracking-tighter font-black">{item.name}</span> <Icon name="external-link" size={20} className="text-yellow-500 opacity-30 group-hover:opacity-100" />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+
+                        case 'final':
+                            return (
+                                <div className="flex flex-col items-center justify-start h-full text-center bg-yellow-400 rounded-[40px] p-8 shadow-2xl relative overflow-hidden animate-in zoom-in duration-500 italic font-black">
                                     <Icon name="shield-check" size={80} className="mb-4 text-black animate-bounce shadow-xl italic" />
-                                    <h2 className="text-5xl font-black uppercase italic leading-[0.8] mb-4 tracking-tighter text-black text-shadow italic font-black">ТЫ ГОТОВ <br/><span className="text-white drop-shadow-2xl">К РАБОТЕ!</span></h2>
+                                    <h2 className="text-5xl font-black uppercase italic leading-[0.8] mb-4 tracking-tighter text-black text-shadow">ТЫ ГОТОВ <br/><span className="text-white drop-shadow-2xl">К РАБОТЕ!</span></h2>
                                     <p className="text-xs uppercase tracking-tighter text-black/60 mb-10">ОБУЧЕНИЕ ЗАВЕРШЕНО. ЗАКРЕПИ ЗНАНИЯ С ПОМОЩЬЮ ШПАРГАЛКИ ТАКСОПАРКА НИЖЕ.</p>
-                                    
-                                    {/* СЕТКА КНОПОК ПЕРЕХОДА */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full font-black italic">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
                                         {[
                                             { id: 'commission', label: 'Комиссии парка' },
                                             { id: 'bonuses', label: 'Бонусы парка' },
-                                            { id: 'minivan', label: 'Минивен, Cruise' },
+                                            { id: 'minivan', label: 'Минивэн, Cruise' },
                                             { id: 'license', label: 'Лицензия/разрешение' },
                                             { id: 'colors', label: 'Цвет авто МСК/МО' },
-                                            { id: 'contract', label: 'Карточка фрахтовщика' },
+                                            { id: 'contract', label: 'Договор фрахтования' },
                                             { id: 'osago', label: 'ОСАГО/ОСГОП' },
                                             { id: 'kisart', label: 'КИС "АРТ"' },
                                             { id: 'smz', label: 'СМЗ и ИП' }
                                         ].map((btn) => (
-                                            <button 
+                                            <button
                                                 key={btn.id}
                                                 onClick={() => scrollToSection(btn.id)}
-                                                className="bg-black text-yellow-400 p-4 rounded-2xl font-black uppercase italic text-[10px] hover:scale-105 transition-all shadow-xl border-b-4 border-yellow-600 active:translate-y-1 italic"
+                                                className="bg-black text-yellow-400 p-4 rounded-2xl font-black uppercase italic text-[10px] hover:scale-105 transition-all shadow-xl border-b-4 border-yellow-600 active:translate-y-1"
                                             >
                                                 {btn.label}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            );
 
-                        <div className="p-8 flex justify-end gap-5 bg-gray-50/50 relative z-50 italic">
-                            <button onClick={() => setCurrentSlide(p => Math.max(1, p-1))} disabled={currentSlide === 1} className="p-6 rounded-[30px] bg-white border border-gray-200 hover:bg-black hover:text-yellow-400 disabled:opacity-10 transition-all shadow-xl active:scale-90 italic"><Icon name="chevron-left" size={40}/></button>
-                            <button onClick={() => setCurrentSlide(p => Math.min(totalSlides, p+1))} disabled={currentSlide === totalSlides} className="p-6 rounded-[30px] bg-yellow-400 text-black hover:scale-110 shadow-2xl font-black transition-all border-4 border-black active:scale-90 italic italic font-black"><Icon name="chevron-right" size={40}/></button>
+                        default:
+                            return null;
+                    }
+                };
+
+                return (
+                    <div className="w-full max-w-6xl mx-auto mb-16 px-4 font-black italic">
+                        <div className="relative overflow-hidden bg-white rounded-[40px] shadow-2xl border border-gray-100 min-h-[720px] flex flex-col">
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gray-100 z-50">
+                                <div className="h-full bg-yellow-400 transition-all duration-300 shadow-[0_0_10px_#facc15]" style={{ width: `${(currentSlide / totalSlides) * 100}%` }}></div>
+                            </div>
+                            <div className="flex-1 p-10 slide-content overflow-y-auto relative">
+                                {renderSlide()}
+                            </div>
+                            <div className="p-8 flex justify-end gap-5 bg-gray-50/50 relative z-50 italic">
+                                <button onClick={() => setCurrentSlide(p => Math.max(1, p-1))} disabled={currentSlide === 1} className="p-6 rounded-[30px] bg-white border border-gray-200 hover:bg-black hover:text-yellow-400 disabled:opacity-10 transition-all shadow-xl active:scale-90 italic"><Icon name="chevron-left" size={40}/></button>
+                                <button onClick={() => setCurrentSlide(p => Math.min(totalSlides, p+1))} disabled={currentSlide === totalSlides} className="p-6 rounded-[30px] bg-yellow-400 text-black hover:scale-110 shadow-2xl font-black transition-all border-4 border-black active:scale-90 italic"><Icon name="chevron-right" size={40}/></button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            );
+                );
+            };
 
             return (
-                <div className="min-h-screen bg-[#f3f4f6] overflow-x-hidden selection:bg-yellow-400 selection:text-black italic font-black font-black italic">
-                    <header className="bg-[#1a1a1a] p-6 border-b-4 border-yellow-400 flex justify-between items-center sticky top-0 z-[100] shadow-2xl italic font-black italic">
+                <div className="min-h-screen bg-[#f3f4f6] overflow-x-hidden selection:bg-yellow-400 selection:text-black italic font-black">
+                    <header className="bg-[#1a1a1a] p-6 border-b-4 border-yellow-400 flex justify-between items-center sticky top-0 z-[100] shadow-2xl italic">
                         <div className="flex items-center gap-6 italic">
-                            <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-12 italic" />
-                            <div className="hidden lg:block text-white/40 font-black italic uppercase text-[9px] tracking-widest leading-tight italic font-black">Сертифицированный партнер <br/>Яндекс.Такси с 2011 года</div>
+                            <img src="view.png" alt="СВОИ" className="h-12 italic" />
+                            <div className="hidden lg:block text-white/40 font-black italic uppercase text-[9px] tracking-widest leading-tight">Сертифицированный партнер <br/>Яндекс.Такси с 2011 года</div>
                         </div>
                         {view !== 'main' && (
-                            <button onClick={goBack} className="bg-yellow-400 text-black px-10 py-3 rounded-2xl font-black uppercase italic text-xs border-2 border-black hover:scale-110 transition-all shadow-xl font-bold tracking-widest italic font-black">На главную</button>
+                            <button onClick={goBack} className="bg-yellow-400 text-black px-10 py-3 rounded-2xl font-black uppercase italic text-xs border-2 border-black hover:scale-110 transition-all shadow-xl tracking-widest">На главную</button>
                         )}
                     </header>
 
-                    <div className="relative h-24 bg-white border-b-8 border-black overflow-hidden shadow-inner italic italic font-black">
+                    <div className="relative h-24 bg-white border-b-8 border-black overflow-hidden shadow-inner italic">
                         <div className="bg-dashed-line"></div>
-                        <div className="absolute top-1/2 -translate-y-1/2 animate-drive-slow flex items-center gap-5 italic font-black">
-                            <div className="bg-black text-yellow-400 px-8 py-3 rounded-[24px] font-black italic uppercase text-sm flex items-center gap-4 shadow-2xl border-4 border-yellow-400/10 tracking-widest italic font-black">
-                                <Icon name="car" size={24} className="animate-bounce italic font-black" /> СВОИ ТАКСИ
+                        <div className="absolute top-1/2 -translate-y-1/2 animate-drive-slow flex items-center gap-5 italic">
+                            <div className="bg-black text-yellow-400 px-8 py-3 rounded-[24px] font-black italic uppercase text-sm flex items-center gap-4 shadow-2xl border-4 border-yellow-400/10 tracking-widest">
+                                <Icon name="car" size={24} className="animate-bounce italic" /> СВОИ ТАКСИ
                             </div>
-                            <div className="w-[600px] h-2 bg-black/5 rounded-full italic font-black"></div>
+                            <div className="w-[600px] h-2 bg-black/5 rounded-full"></div>
                         </div>
                     </div>
 
                     {view === 'main' && (
-                        <main className="max-w-7xl mx-auto py-24 px-8 animate-in fade-in duration-700 italic font-black italic font-black">
-                            <div className="flex flex-col md:flex-row items-end justify-between gap-10 mb-24 border-b-8 border-black pb-12 italic font-black italic">
-                                <div className="max-w-2xl relative italic italic font-black italic">
-                                    <div className="absolute -top-12 -left-8 bg-black text-yellow-400 px-6 py-2 rounded-full font-black text-[12px] uppercase italic tracking-[0.3em] shadow-2xl italic font-black italic font-black">Staff Portal v2.0</div>
-                                    <h1 className="text-8xl md:text-[140px] font-black italic tracking-tighter uppercase leading-[0.75] text-black text-shadow font-black italic italic font-black italic italic font-black">БУДЬ <br/><span className="text-yellow-400 bg-black px-6 inline-block transform -skew-x-6 italic font-black italic font-black italic">СВОИМ</span> <br/>В КОМАНДЕ.</h1>
+                        <main className="max-w-7xl mx-auto py-24 px-8 animate-in fade-in duration-700 italic">
+                            <div className="flex flex-col md:flex-row items-end justify-between gap-10 mb-24 border-b-8 border-black pb-12 italic">
+                                <div className="max-w-2xl relative italic">
+                                    <h1 className="text-8xl md:text-[140px] font-black italic tracking-tighter uppercase leading-[0.75] text-black text-shadow">БУДЬ <br/><span className="text-yellow-400 bg-black px-6 inline-block transform -skew-x-6">СВОИМ</span> <br/>В КОМАНДЕ.</h1>
                                 </div>
-                                <div className="text-right italic italic font-black">
-                                    <p className="text-gray-400 font-black italic uppercase text-sm tracking-[0.2em] leading-tight italic font-black">Официальная система <br/>обучения и поддержки</p>
-                                    <div className="w-40 h-3 bg-yellow-400 mt-4 ml-auto rounded-full italic font-black"></div>
+                                <div className="text-right italic">
+                                    <p className="text-gray-400 font-black italic uppercase text-sm tracking-[0.2em] leading-tight">Официальная система <br/>обучения и поддержки</p>
+                                    <div className="w-40 h-3 bg-yellow-400 mt-4 ml-auto rounded-full"></div>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                                 {DEPARTMENTS.map(dept => (
-                                    <button key={dept.id} onClick={() => handleDeptSelect(dept)} className="group bg-white p-14 rounded-[70px] shadow-2xl border-b-[16px] border-gray-100 hover:border-yellow-400 transition-all hover:-translate-y-6 text-center overflow-hidden relative border border-gray-50 active:scale-95 duration-300 italic font-black font-black italic">
-                                        <div className="bg-black text-yellow-400 w-20 h-20 rounded-[30px] flex items-center justify-center mx-auto mb-10 shadow-2xl group-hover:rotate-12 transition-transform italic font-black italic font-black">
+                                    <button key={dept.id} onClick={() => handleDeptSelect(dept)} className="group bg-white p-14 rounded-[70px] shadow-2xl border-b-[16px] border-gray-100 hover:border-yellow-400 transition-all hover:-translate-y-6 text-center overflow-hidden relative border border-gray-50 active:scale-95 duration-300 italic">
+                                        <div className="bg-black text-yellow-400 w-20 h-20 rounded-[30px] flex items-center justify-center mx-auto mb-10 shadow-2xl group-hover:rotate-12 transition-transform">
                                             <Icon name={dept.icon} size={40} />
                                         </div>
-                                        <h3 className="text-3xl font-black italic uppercase mb-4 tracking-tighter text-black leading-none font-black italic italic italic font-black">{dept.title}</h3>
-                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest italic leading-relaxed opacity-50 font-black italic font-black">{dept.description}</p>
-                                        <div className="absolute -bottom-10 -right-10 text-black/[0.02] rotate-12 pointer-events-none transition-transform group-hover:scale-150 italic font-black font-black italic font-black"><Icon name={dept.icon} size={150} /></div>
+                                        <h3 className="text-3xl font-black italic uppercase mb-4 tracking-tighter text-black leading-none">{dept.title}</h3>
+                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest italic leading-relaxed opacity-50">{dept.description}</p>
+                                        <div className="absolute -bottom-10 -right-10 text-black/[0.02] rotate-12 pointer-events-none transition-transform group-hover:scale-150"><Icon name={dept.icon} size={150} /></div>
                                     </button>
                                 ))}
                             </div>
@@ -371,84 +1092,611 @@
                     )}
 
                     {view === 'auth' && (
-                        <main className="max-w-xl mx-auto py-32 px-8 animate-in zoom-in-95 duration-300 font-black italic font-black italic font-black">
-                            <div className="bg-white p-16 rounded-[80px] shadow-2xl text-center border-[12px] border-black relative overflow-hidden font-black italic italic font-black italic">
-                                <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-400 -translate-y-20 translate-x-20 rotate-45 opacity-50 italic font-black font-black italic"></div>
-                                <Icon name="lock" size={80} className="mx-auto mb-12 text-black font-black" />
-                                <h2 className="text-4xl font-black uppercase italic mb-3 tracking-tighter text-black font-black italic italic font-black font-black">Вход в сектор</h2>
-                                <p className="text-gray-400 mb-12 italic text-xl font-black uppercase tracking-[0.2em] underline decoration-yellow-400 decoration-[12px] underline-offset-8 italic font-black font-black font-black">{selectedDept.title}</p>
+                        <main className="max-w-xl mx-auto py-32 px-8 animate-in zoom-in-95 duration-300 italic">
+                            <div className="bg-white p-16 rounded-[80px] shadow-2xl text-center border-[12px] border-black relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-400 -translate-y-20 translate-x-20 rotate-45 opacity-50"></div>
+                                <Icon name="lock" size={80} className="mx-auto mb-12 text-black" />
+                                <h2 className="text-4xl font-black uppercase italic mb-3 tracking-tighter text-black">Вход в сектор</h2>
+                                <p className="text-gray-400 mb-12 italic text-xl font-black uppercase tracking-[0.2em] underline decoration-yellow-400 decoration-[12px] underline-offset-8">{selectedDept?.title}</p>
                                 <form onSubmit={handlePinSubmit} className="space-y-12">
-                                    <input type="password" maxLength="4" placeholder="••••" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full bg-gray-100 text-center text-7xl py-10 rounded-[45px] border-4 border-gray-50 focus:border-yellow-400 transition-all font-black shadow-inner italic font-black font-black italic" />
-                                    {error && <p className="text-red-500 font-black uppercase animate-shake tracking-widest text-xs font-black italic font-black italic">Код доступа не подтвержден</p>}
-                                    <button type="submit" className="w-full bg-yellow-400 text-black py-8 rounded-[45px] font-black uppercase italic text-3xl shadow-2xl hover:scale-105 transition-all shadow-yellow-400/20 active:scale-95 italic tracking-widest font-black italic">Войти</button>
+                                    <input type="password" maxLength="4" placeholder="••••" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full bg-gray-100 text-center text-7xl py-10 rounded-[45px] border-4 border-gray-50 focus:border-yellow-400 transition-all font-black shadow-inner" />
+                                    {error && <p className="text-red-500 font-black uppercase animate-shake tracking-widest text-xs">Код доступа не подтвержден</p>}
+                                    <button type="submit" className="w-full bg-yellow-400 text-black py-8 rounded-[45px] font-black uppercase italic text-3xl shadow-2xl hover:scale-105 transition-all shadow-yellow-400/20 active:scale-95 tracking-widest">Войти</button>
                                 </form>
                             </div>
                         </main>
                     )}
 
-                    {view === 'content' && (
-                        <main className="animate-in slide-in-from-bottom-10 duration-1000 italic font-black italic font-black italic font-black">
-                            <div className="bg-black text-yellow-400 py-5 text-center sticky top-[95px] z-[90] shadow-2xl font-black text-[11px] uppercase tracking-[0.5em] italic overflow-hidden font-black italic font-black italic">
-                                <div className="animate-marquee italic italic font-black italic font-black italic">ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ</div>
+                    {view === 'qcontent' && (
+                        <main className="animate-in slide-in-from-bottom-10 duration-1000 italic">
+                            <div className="bg-black text-yellow-400 py-5 text-center sticky top-[95px] z-[90] shadow-2xl font-black text-[11px] uppercase tracking-[0.5em] italic overflow-hidden">
+                                <div className="animate-marquee">ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ</div>
                             </div>
-                            <div className="py-24 font-black italic font-black italic font-black italic">
+                            <div className="py-24">
                                 <Presentation />
-                                <div ref={cheatSheetRef} className="w-full max-w-6xl mx-auto px-4 pb-40 text-black pt-20 font-black italic font-black italic font-black">
-                                    <h2 className="text-7xl md:text-[100px] font-black italic uppercase tracking-tighter mb-24 text-center leading-none italic font-black italic font-black italic font-black">ТВОЯ <br/><span className="text-yellow-400 bg-black px-6 transform skew-x-[-5deg] inline-block shadow-xl italic font-black italic italic font-black italic italic font-black">ШПАРГАЛКА</span> СВОИ</h2>
-                                    
-                                    {/* БЛОКИ ШПАРГАЛКИ */}
+                                <div ref={cheatSheetRef} className="w-full max-w-6xl mx-auto px-4 pb-40 text-black pt-20">
+                                    <h2 className="text-7xl md:text-[100px] font-black italic uppercase tracking-tighter mb-8 text-center leading-none">ТВОЯ <br/><span className="text-yellow-400 bg-black px-6 transform skew-x-[-5deg] inline-block shadow-xl">ШПАРГАЛКА</span> СВОИ</h2>
+
+                                    {/* Кнопки навигации по разделам */}
+                                    <div className="grid grid-cols-3 md:grid-cols-9 gap-2 mb-16">
+                                        {[
+                                            { id: 'commission', label: 'Комиссии' },
+                                            { id: 'bonuses', label: 'Бонусы' },
+                                            { id: 'minivan', label: 'Минивэн' },
+                                            { id: 'license', label: 'Лицензия' },
+                                            { id: 'colors', label: 'Цвет авто' },
+                                            { id: 'contract', label: 'Договор фрахтования' },
+                                            { id: 'osago', label: 'ОСАГО' },
+                                            { id: 'kisart', label: 'КИС АРТ' },
+                                            { id: 'smz', label: 'СМЗ/ИП' }
+                                        ].map((btn) => (
+                                            <button
+                                                key={btn.id}
+                                                onClick={() => scrollToSection(btn.id)}
+                                                className="bg-black text-yellow-400 p-3 rounded-xl font-black uppercase text-[9px] hover:scale-105 transition-all shadow-lg border-b-4 border-yellow-600 active:translate-y-1"
+                                            >
+                                                {btn.label}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* БЛОК КОМИССИИ ПАРКА */}
                                     <div className="grid grid-cols-1 gap-20">
-                                        
+
                                         {/* 1. КОМИССИИ */}
-                                        <div id="commission" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100 italic italic font-black">
-                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6 font-black italic font-black italic font-black">
-                                                <Icon name="credit-card" size={60} className="text-black font-black italic" />
-                                                <h3 className="text-5xl font-black uppercase tracking-tighter italic font-black">Комиссии парка</h3>
+                                        <div id="commission" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6">
+                                                <Icon name="credit-card" size={60} className="text-black" />
+                                                <h3 className="text-5xl font-black uppercase tracking-tighter">Комиссии парка</h3>
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 font-black italic">
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                                 <div className="space-y-6">
-                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400 italic font-black"><h4 className="text-yellow-600 uppercase text-xs mb-2 italic">Такси (Парковые):</h4><p className="text-2xl font-black italic">1.4% + 6 ₽ + 60 ₽/день</p></div>
-                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400 italic font-black"><h4 className="text-yellow-600 uppercase text-xs mb-2 italic">Курьеры (Парковые):</h4><p className="text-2xl font-black italic">1.4% + 60 ₽/день</p></div>
+                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400">
+                                                        <h4 className="text-yellow-600 uppercase text-xs mb-2">Такси (Парковые):</h4>
+                                                        <p className="text-2xl font-black">1.4% + 6 ₽ + 60 ₽/день</p>
+                                                    </div>
+                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400">
+                                                        <h4 className="text-yellow-600 uppercase text-xs mb-2">Курьеры (Парковые):</h4>
+                                                        <p className="text-2xl font-black">1.4% + 60 ₽/день</p>
+                                                    </div>
                                                 </div>
                                                 <div className="space-y-6">
-                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl font-black italic"><h4 className="text-yellow-400 uppercase text-xs mb-2 italic italic font-black">ПСМЗ и ИП (Такси):</h4><p className="text-2xl font-black italic italic italic font-black">0% (7 дней) → далее 1%</p></div>
-                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl font-black italic"><h4 className="text-yellow-400 uppercase text-xs mb-2 italic italic font-black">ПСМЗ и ИП (Курьеры):</h4><p className="text-2xl font-black italic italic italic font-black">1% + 50 ₽/день</p></div>
+                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl">
+                                                        <h4 className="text-yellow-400 uppercase text-xs mb-2">ПСМЗ и ИП (Такси):</h4>
+                                                        <p className="text-2xl font-black">0% (7 дней) → далее 1%</p>
+                                                    </div>
+                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl">
+                                                        <h4 className="text-yellow-400 uppercase text-xs mb-2">ПСМЗ и ИП (Курьеры):</h4>
+                                                        <p className="text-2xl font-black">1% + 50 ₽/день</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="mt-12 bg-red-50 p-10 rounded-[40px] border-4 border-red-500 shadow-2xl font-black italic italic font-black">
-                                                <h4 className="text-red-600 text-3xl mb-8 uppercase tracking-tighter italic underline decoration-red-200 font-black italic font-black">Повышение комиссии</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-black italic">
-                                                    <div className="space-y-2 font-black italic"><p className="text-[10px] text-red-400 uppercase italic italic font-black">Парковые водители:</p><p className="text-sm font-black italic">1.4% <span className="text-red-500 font-black">→</span> 5.5%</p><p className="text-sm font-black italic">6 ₽ <span className="text-red-500 font-black">→</span> 10 ₽</p><p className="text-sm font-black italic">60/сут <span className="text-red-500 font-black">→</span> 150/сут</p></div>
-                                                    <div className="space-y-2 font-black italic"><p className="text-[10px] text-red-400 uppercase italic italic font-black">Парковые курьеры:</p><p className="text-sm font-black italic">1.4% <span className="text-red-500 font-black">→</span> 6%</p><p className="text-sm font-black italic">60/сут <span className="text-red-500 font-black">→</span> 1.4% <span className="text-red-500 font-black">→</span> 6%</p></div>
-                                                    <div className="space-y-2 font-black italic"><p className="text-[10px] text-red-400 uppercase italic italic font-black">ПСМЗ:</p><p className="text-sm font-black italic">Водители: 1% <span className="text-red-500 font-black">→</span> 3%</p><p className="text-sm font-black italic">Курьеры: 50 ₽/сут <span className="text-red-500 font-black">→</span> 1.4% <span className="text-red-500 font-black">→</span> 3%</p></div>
+
+                                            <div className="mt-12 bg-red-50 p-10 rounded-[40px] border-4 border-red-500 shadow-2xl">
+                                                <h4 className="text-red-600 text-3xl mb-8 uppercase tracking-tighter underline decoration-red-200">Повышение комиссии</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-black">
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] text-red-400 uppercase">Парковые водители:</p>
+                                                        <p className="text-sm font-black">1.4% <span className="text-red-500">→</span> 5.5%</p>
+                                                        <p className="text-sm font-black">6 ₽ <span className="text-red-500">→</span> 10 ₽</p>
+                                                        <p className="text-sm font-black">60/сут <span className="text-red-500">→</span> 150/сут</p>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] text-red-400 uppercase">Парковые курьеры:</p>
+                                                        <p className="text-sm font-black">1.4% <span className="text-red-500">→</span> 6%</p>
+                                                        <p className="text-sm font-black">60/сут <span className="text-red-500">→</span> 1.4% <span className="text-red-500">→</span> 6%</p>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] text-red-400 uppercase">ПСМЗ:</p>
+                                                        <p className="text-sm font-black">Водители: 1% <span className="text-red-500">→</span> 3%</p>
+                                                        <p className="text-sm font-black">Курьеры: 50 ₽/сут <span className="text-red-500">→</span> 1.4% <span className="text-red-500">→</span> 3%</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="mt-10 bg-black text-yellow-400 p-6 rounded-[30px] text-center uppercase tracking-widest text-[10px] border-b-8 border-yellow-600 italic font-black italic">Тариф 50 ₽/сутки доступен только КУРЬЕРАМ на ПСМЗ. <br/>Для водителей ТАКСИ на ПСМЗ такой тариф не предусмотрен.</div>
+
+                                            <div className="mt-10 bg-black text-yellow-400 p-6 rounded-[30px] text-center uppercase tracking-widest text-[10px] border-b-8 border-yellow-600">
+                                                Тариф 50 ₽/сутки доступен только КУРЬЕРАМ на ПСМЗ. <br/>Для водителей ТАКСИ на ПСМЗ такой тариф не предусмотрен.
+                                            </div>
                                         </div>
 
                                         {/* 2. БОНУСЫ */}
-                                        <div id="bonuses" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="gift" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Бонусы парка</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+                                        <div id="bonuses" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6">
+                                                <Icon name="gift" size={60} className="text-black" />
+                                                <h3 className="text-5xl font-black uppercase tracking-tighter">🎁 Бонусы парков</h3>
+                                            </div>
 
-                                        {/* 3. МИНИВЕН */}
-                                        <div id="minivan" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="truck" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Минивен, Cruise</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                                {/* Свои/CashTaxi */}
+                                                <div className="bg-gradient-to-br from-gray-50 to-yellow-50 p-8 rounded-[40px] border-4 border-yellow-400 shadow-xl">
+                                                    <div className="flex items-center gap-4 mb-6">
+                                                        <div className="bg-black text-yellow-400 p-4 rounded-2xl"><Icon name="gift" size={32}/></div>
+                                                        <h4 className="text-2xl font-black uppercase">СВОИ / CashTaxi</h4>
+                                                    </div>
+                                                    <div className="space-y-4">
+                                                        <div className="bg-white p-5 rounded-2xl border-l-4 border-green-500">
+                                                            <p className="font-black text-green-600 text-xs uppercase tracking-widest mb-1">Приветственный бонус</p>
+                                                            <p className="text-xs text-gray-500 mb-2">Условия: отзыв + 5 поездок</p>
+                                                            <p className="text-3xl font-black">300 ₽</p>
+                                                        </div>
+                                                        <div className="bg-white p-5 rounded-2xl border-l-4 border-purple-500">
+                                                            <p className="font-black text-purple-600 text-xs uppercase tracking-widest mb-1">За поездки (ПСМЗ/ИП)</p>
+                                                            <p className="font-bold text-sm">199 заказов за 7 дней → <span className="text-2xl font-black">3000 ₽</span></p>
+                                                            <p className="font-bold text-xs text-gray-500 mt-2">Не успели 199, но сделали 100 → <span className="font-black">500 ₽</span></p>
+                                                        </div>
+                                                        <div className="bg-white p-5 rounded-2xl border-l-4 border-orange-500">
+                                                            <p className="font-black text-orange-600 text-xs uppercase tracking-widest mb-1">Приведи друга</p>
+                                                            <p className="font-bold">Парковый 150 заказов/30 дней → <span className="font-black">600 ₽</span></p>
+                                                            <p className="font-bold">ПСМЗ/ИП друг → <span className="font-black">1200 ₽</span></p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Мерен/Лучшие заказы */}
+                                                <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-8 rounded-[40px] border-4 border-blue-400 shadow-xl">
+                                                    <div className="flex items-center gap-4 mb-6">
+                                                        <div className="bg-black text-blue-400 p-4 rounded-2xl"><Icon name="star" size={32}/></div>
+                                                        <h4 className="text-2xl font-black uppercase">Мерен / Лучшие заказы</h4>
+                                                    </div>
+                                                    <div className="space-y-4">
+                                                        <div className="bg-white p-5 rounded-2xl border-l-4 border-green-500">
+                                                            <p className="font-black text-green-600 text-xs uppercase tracking-widest mb-1">Приветственный бонус</p>
+                                                            <p className="text-xs text-gray-500 mb-2">Условия: отзыв + 5 поездок</p>
+                                                            <p className="text-3xl font-black">500 ₽</p>
+                                                        </div>
+                                                        <div className="bg-white p-5 rounded-2xl border-l-4 border-purple-500">
+                                                            <p className="font-black text-purple-600 text-xs uppercase tracking-widest mb-1">За поездки (ПСМЗ/ИП)</p>
+                                                            <p className="font-bold text-sm">199 заказов за 7 дней → <span className="text-2xl font-black">3000 ₽</span></p>
+                                                            <p className="font-bold text-xs text-gray-500 mt-2">Не успели 199, но сделали 100 → <span className="font-black">500 ₽</span></p>
+                                                        </div>
+                                                        <div className="bg-white p-5 rounded-2xl border-l-4 border-orange-500">
+                                                            <p className="font-black text-orange-600 text-xs uppercase tracking-widest mb-1">Приведи друга</p>
+                                                            <p className="font-bold">Парковый 150 заказов/30 дней → <span className="font-black">500 ₽</span></p>
+                                                            <p className="font-bold">ПСМЗ/ИП друг → <span className="font-black">1000 ₽</span></p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 3. МИНИВЭН */}
+                                        <div id="minivan" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-6">
+                                                <Icon name="truck" size={40}/>
+                                                <h3 className="text-3xl uppercase tracking-tighter">Минивэн / Cruise</h3>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                                <div className="bg-red-50 p-6 rounded-2xl border-4 border-red-400">
+                                                    <p className="font-black text-red-600 text-xs uppercase tracking-widest mb-2">⚠ Тариф «Минивэн»</p>
+                                                    <p className="font-bold text-sm">В нашем парке <span className="underline">НЕ подключаем</span></p>
+                                                </div>
+
+                                                <div className="bg-green-50 p-6 rounded-2xl border-4 border-green-400">
+                                                    <p className="font-black text-green-600 text-xs uppercase tracking-widest mb-2">✅ Автомобиль минивэн</p>
+                                                    <p className="font-bold text-sm">Подключить <span className="underline">МОЖНО</span></p>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-gray-50 to-purple-50 p-8 rounded-[32px] border-2 border-purple-200 mb-6">
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    <div className="bg-black text-purple-400 p-3 rounded-xl"><Icon name="star" size={24}/></div>
+                                                    <h4 className="text-xl font-black uppercase">Минивэн Премиум (Cruise)</h4>
+                                                </div>
+                                                <p className="text-sm text-gray-700 mb-4 leading-relaxed">Премиальный тариф с соответствующими автомобилями. Водителю необходимо соблюдать дресс-код, стандарты сервиса. Для этого тарифа <span className="bg-yellow-400 px-2 py-1 rounded font-black">лицензия не нужна</span>.</p>
+                                                <div className="bg-white p-4 rounded-2xl border-2 border-gray-100">
+                                                    <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Автомобили:</p>
+                                                    <p className="font-black text-lg">В большинстве случаев подходит Mercedes-Benz V-klasse от 2015 г.</p>
+                                                </div>
+                                                <div className="mt-4 bg-blue-50 p-4 rounded-2xl border-2 border-blue-200">
+                                                    <p className="text-xs text-blue-600 uppercase tracking-widest mb-1">📍 Доступен:</p>
+                                                    <p className="font-black text-blue-800">Только Москва и МО</p>
+                                                </div>
+                                            </div>
+                                        </div>
 
                                         {/* 4. ЛИЦЕНЗИЯ */}
-                                        <div id="license" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="file-check" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Лицензия/разрешение</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+                                        <div id="license" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6">
+                                                <Icon name="file-check" size={40}/>
+                                                <h3 className="text-5xl font-black uppercase tracking-tighter">Лицензия / Разрешение</h3>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                                <div className="bg-blue-50 p-6 rounded-[24px] border-4 border-blue-400">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <div className="bg-blue-600 text-white p-2 rounded-xl"><Icon name="user-check" size={24}/></div>
+                                                        <h4 className="text-lg font-black uppercase">Разрешение перевозчика</h4>
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 mb-3">На водителя (СМЗ/ИП). Срок — 5 лет.</p>
+                                                    <p className="font-black text-green-600 text-sm">+10 баллов к приоритету</p>
+                                                </div>
+
+                                                <div className="bg-green-50 p-6 rounded-[24px] border-4 border-green-400">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <div className="bg-green-600 text-white p-2 rounded-xl"><Icon name="file-text" size={24}/></div>
+                                                        <h4 className="text-lg font-black uppercase">Выписка из реестра ФГИС</h4>
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 mb-3">На автомобиль (в т.ч. арендованный).</p>
+                                                    <p className="font-black text-green-600 text-sm">+10 баллов к приоритету</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-red-50 p-6 rounded-[24px] border-4 border-red-400 mb-6">
+                                                <h4 className="font-black uppercase text-red-600 mb-3 text-sm">⚠ Деприоритет за отсутствие</h4>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <p className="font-black text-sm">Нет выписки: <span className="text-red-600">-15 баллов</span></p>
+                                                    <p className="font-black text-sm">Нет разрешения: <span className="text-red-600">-15 баллов</span></p>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-green-50 p-6 rounded-[24px] border-4 border-green-400 mb-6">
+                                                <h4 className="font-black uppercase text-green-600 mb-3 text-sm">✓ НЕ требуется</h4>
+                                                <div className="grid grid-cols-2 gap-4 text-sm font-black">
+                                                    <p>🚗 Премиум тарифы</p>
+                                                    <p>📦 Доставка</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-gray-50 p-6 rounded-[24px] border-4 border-gray-300 mb-6">
+                                                <h4 className="font-black uppercase text-gray-600 mb-3 text-sm">Требования к водителю</h4>
+                                                <div className="grid grid-cols-2 gap-3 text-sm font-black">
+                                                    <p>📄 В/У категории B</p>
+                                                    <p>📊 Стаж от 3 лет</p>
+                                                    <p>💼 ИП или самозанятый</p>
+                                                    <p>✓ Без судимостей</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-black text-yellow-400 p-6 rounded-[24px] border-4 border-yellow-400">
+                                                <p className="font-black text-sm mb-2">⚠ Без постоянной регистрации в регионе — оформление невозможно</p>
+                                                <p className="font-black text-sm">Передавать разрешение другому лицу нельзя</p>
+                                            </div>
+                                        </div>
 
                                         {/* 5. ЦВЕТ АВТО */}
-                                        <div id="colors" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="palette" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Цвет авто МСК/МО</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+                                        <div id="colors" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6">
+                                                <Icon name="palette" size={40}/>
+                                                <h3 className="text-5xl font-black uppercase tracking-tighter">Цвет авто МСК/МО</h3>
+                                            </div>
 
-                                        {/* 6. ДОГОВОР */}
-                                        <div id="contract" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="clipboard-list" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">Карточка фрахтовщика</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-8 rounded-[32px] border-4 border-yellow-400">
+                                                    <div className="flex items-center gap-4 mb-4">
+                                                        <div className="bg-yellow-400 p-3 rounded-xl"><Icon name="map-pin" size={24}/></div>
+                                                        <h4 className="text-xl font-black uppercase">Москва</h4>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-xl mb-4 border-2 border-yellow-300">
+                                                        <p className="text-xs text-yellow-600 uppercase tracking-widest mb-2">Требование:</p>
+                                                        <p className="font-black text-lg">Жёлтый цвет кузова по СТС</p>
+                                                    </div>
+                                                    <div className="bg-red-50 p-4 rounded-xl border-2 border-red-300">
+                                                        <p className="font-black text-red-600 text-xs uppercase mb-2">⚠ Важно:</p>
+                                                        <p className="font-black text-sm">Водитель должен быть ИП и владельцем ТС. Если автомобиль не его — могут отказать в разрешении</p>
+                                                    </div>
+                                                </div>
 
-                                        {/* 7. ОСАГО */}
-                                        <div id="osago" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="shield" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">ОСАГО/ОСГОП</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+                                                <div className="bg-gradient-to-br from-gray-50 to-slate-50 p-8 rounded-[32px] border-4 border-gray-400">
+                                                    <div className="flex items-center gap-4 mb-4">
+                                                        <div className="bg-gray-400 p-3 rounded-xl"><Icon name="map-pin" size={24}/></div>
+                                                        <h4 className="text-xl font-black uppercase">МО и регионы</h4>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-xl mb-4 border-2 border-gray-300">
+                                                        <p className="text-xs text-gray-600 uppercase tracking-widest mb-2">Требование:</p>
+                                                        <p className="font-black text-sm">Белый цвет кузова с жёлтой и серой полосами по СТС</p>
+                                                    </div>
+                                                    <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-300">
+                                                        <p className="font-black text-blue-600 text-xs uppercase mb-2">ℹ Если:</p>
+                                                        <p className="font-black text-sm">Машина белого цвета по СТС и не оклеена — водитель должен оклеить. После — поменять СТС в ГИБДД</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 6. ДОГОВОР ФРАХТОВАНИЯ */}
+                                        <div id="contract" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6">
+                                                <Icon name="clipboard-list" size={60} className="text-black" />
+                                                <h3 className="text-5xl font-black uppercase tracking-tighter">Договор фрахтования<br/><span className="text-3xl">«Карточка фрахтовщика»</span></h3>
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[32px] border-4 border-blue-400 mb-10">
+                                                <div className="flex items-start gap-4 mb-4">
+                                                    <div className="bg-blue-600 text-white p-3 rounded-xl"><Icon name="file-text" size={32}/></div>
+                                                    <div>
+                                                        <h4 className="text-xl font-black uppercase mb-2">Что такое договор фрахтования?</h4>
+                                                        <p className="text-sm text-gray-700 leading-relaxed font-black">
+                                                            Договор, на основании которого осуществляется перевозка пассажиров и багажа по заказу в сервисе <span className="bg-yellow-400 px-2 py-1 rounded">«Яндекс Про»</span>. Заключается между перевозчиком (фрахтовщиком) и пассажиром (фрахтователем).
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                                                <div className="bg-green-50 p-6 rounded-[24px] border-4 border-green-400">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <div className="bg-green-600 text-white p-2 rounded-xl"><Icon name="user-check" size={24}/></div>
+                                                        <h4 className="text-lg font-black uppercase">Фрахтовщик</h4>
+                                                    </div>
+                                                    <p className="text-sm font-black text-gray-700">Физлицо или юрлицо, которое предоставляет технику для грузо- или пассажироперевозок.</p>
+                                                </div>
+
+                                                <div className="bg-purple-50 p-6 rounded-[24px] border-4 border-purple-400">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <div className="bg-purple-600 text-white p-2 rounded-xl"><Icon name="users" size={24}/></div>
+                                                        <h4 className="text-lg font-black uppercase">Фрахтователь</h4>
+                                                    </div>
+                                                    <p className="text-sm font-black text-gray-700">Тот, кто заказал грузоперевозку.</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-8 rounded-[32px] border-4 border-yellow-400 mb-10">
+                                                <div className="flex items-start gap-4 mb-6">
+                                                    <div className="bg-yellow-400 p-3 rounded-xl"><Icon name="id-card" size={32}/></div>
+                                                    <div>
+                                                        <h4 className="text-xl font-black uppercase mb-2">Карточка водителя (фрахтовщика)</h4>
+                                                        <p className="text-sm text-gray-700 leading-relaxed font-black">
+                                                            Обязательный документ, который должен размещаться в салоне легкового такси. Обеспечивает прозрачность услуг, гарантирует легальность работы водителя и перевозчика, информирует пассажиров о ключевых данных и тарифах.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-gray-50 p-8 rounded-[32px] border-4 border-gray-300">
+                                                <h4 className="text-xl font-black uppercase mb-6 flex items-center gap-3">
+                                                    <Icon name="check-circle" size={32} className="text-green-500"/>
+                                                    Функции карточки
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-green-500 flex items-start gap-3">
+                                                        <div className="bg-green-500 text-white p-1 rounded-full mt-0.5"><Icon name="check" size={12}/></div>
+                                                        <p className="text-sm font-black text-gray-700">Позволяет пассажирам сразу увидеть ключевые данные о перевозчике и водителе</p>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-green-500 flex items-start gap-3">
+                                                        <div className="bg-green-500 text-white p-1 rounded-full mt-0.5"><Icon name="check" size={12}/></div>
+                                                        <p className="text-sm font-black text-gray-700">Подтверждает легальность работы такси</p>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-green-500 flex items-start gap-3">
+                                                        <div className="bg-green-500 text-white p-1 rounded-full mt-0.5"><Icon name="check" size={12}/></div>
+                                                        <p className="text-sm font-black text-gray-700">Даёт возможность связаться с перевозчиком в случае жалоб, предложений или вопросов</p>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-green-500 flex items-start gap-3">
+                                                        <div className="bg-green-500 text-white p-1 rounded-full mt-0.5"><Icon name="check" size={12}/></div>
+                                                        <p className="text-sm font-black text-gray-700">Информирует о тарифах и правилах их применения</p>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-green-500 flex items-start gap-3 md:col-span-2">
+                                                        <div className="bg-green-500 text-white p-1 rounded-full mt-0.5"><Icon name="check" size={12}/></div>
+                                                        <p className="text-sm font-black text-gray-700">Повышает доверие пассажиров к легальным перевозчикам</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 7. ОСАГО/ОСГОП */}
+                                        <div id="osago" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6">
+                                                <Icon name="shield" size={60} className="text-black" />
+                                                <h3 className="text-5xl font-black uppercase tracking-tighter">ОСАГО/ОСГОП</h3>
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[32px] border-4 border-blue-400 mb-8">
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    <div className="bg-blue-600 text-white p-3 rounded-xl"><Icon name="file-check" size={32}/></div>
+                                                    <h4 className="text-xl font-black uppercase">ОСГОП — для перевозчика</h4>
+                                                </div>
+                                                <p className="text-sm text-gray-700 leading-relaxed font-black mb-4">
+                                                    Страхование ответственности перевозчика перед пассажирами. Закон <span className="bg-yellow-400 px-2 py-1 rounded">67-ФЗ</span>.
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">
+                                                        <p className="text-[10px] text-blue-400 uppercase mb-1">Срок</p>
+                                                        <p className="text-sm font-black">3, 6 или 12 месяцев</p>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500">
+                                                        <p className="text-[10px] text-blue-400 uppercase mb-1">Контролирует</p>
+                                                        <p className="text-sm font-black">Минтранс</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-8 rounded-[32px] border-4 border-yellow-400 mb-8">
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    <div className="bg-yellow-400 p-3 rounded-xl"><Icon name="car" size={32}/></div>
+                                                    <h4 className="text-xl font-black uppercase">ОСАГО — для такси</h4>
+                                                </div>
+                                                <p className="text-sm text-gray-700 leading-relaxed font-black mb-4">
+                                                    В полисе должна быть отметка <span className="bg-black text-yellow-400 px-2 py-1 rounded">«Такси»</span>.
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-yellow-500">
+                                                        <p className="text-[10px] text-yellow-600 uppercase mb-1">Срок</p>
+                                                        <p className="text-sm font-black">На 1 день (Яндекс) или на длительный срок</p>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-yellow-500">
+                                                        <p className="text-[10px] text-yellow-600 uppercase mb-1">Контролирует</p>
+                                                        <p className="text-sm font-black">ГИБДД</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="bg-red-50 p-6 rounded-[24px] border-4 border-red-400">
+                                                    <h4 className="font-black uppercase text-red-600 mb-3 text-sm flex items-center gap-2">
+                                                        <Icon name="alert-triangle" size={24}/>
+                                                        Нет ОСГОП
+                                                    </h4>
+                                                    <p className="text-sm font-black text-gray-700">Приостановление разрешения до 30 дней → аннулирование</p>
+                                                </div>
+
+                                                <div className="bg-orange-50 p-6 rounded-[24px] border-4 border-orange-400">
+                                                    <h4 className="font-black uppercase text-orange-600 mb-3 text-sm flex items-center gap-2">
+                                                        <Icon name="alert-circle" size={24}/>
+                                                        Нет ОСАГО
+                                                    </h4>
+                                                    <p className="text-sm font-black text-gray-700">Штраф, задержание ТС, запрет эксплуатации</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-8 bg-black text-yellow-400 p-6 rounded-[24px] border-4 border-yellow-400 text-center">
+                                                <p className="font-black text-sm">Нет ОСГОП — риск лишения разрешения. Нет ОСАГО — штраф и запрет эксплуатации.</p>
+                                            </div>
+                                        </div>
 
                                         {/* 8. КИС АРТ */}
-                                        <div id="kisart" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="key" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">КИС "АРТ"</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+                                        <div id="kisart" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6">
+                                                <Icon name="key" size={60} className="text-black" />
+                                                <h3 className="text-5xl font-black uppercase tracking-tighter">КИС «АРТ»</h3>
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-[32px] border-4 border-purple-400 mb-8">
+                                                <div className="flex items-start gap-4 mb-4">
+                                                    <div className="bg-purple-600 text-white p-3 rounded-xl"><Icon name="monitor" size={32}/></div>
+                                                    <div>
+                                                        <h4 className="text-xl font-black uppercase mb-2">Что такое КИС «АРТ»?</h4>
+                                                        <p className="text-sm text-gray-700 leading-relaxed font-black">
+                                                            Комплексная информационная система <span className="bg-white px-2 py-1 rounded">«Аналитика работы такси»</span>, запущенная правительством Москвы. Следит, чтобы водители не перерабатывали и вовремя проходили медицинские и технические осмотры.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-blue-50 p-6 rounded-[24px] border-4 border-blue-400 mb-8">
+                                                <h4 className="font-black uppercase text-blue-600 mb-3 text-sm flex items-center gap-2">
+                                                    <Icon name="users" size={24}/>
+                                                    Для кого необходим
+                                                </h4>
+                                                <p className="text-sm font-black text-gray-700">Для водителей такси и курьеров, работающих в Москве и МО.</p>
+                                            </div>
+
+                                            <div className="bg-green-50 p-6 rounded-[24px] border-4 border-green-400 mb-8">
+                                                <h4 className="font-black uppercase text-green-600 mb-3 text-sm flex items-center gap-2">
+                                                    <Icon name="check-circle" size={24}/>
+                                                    Регистрация
+                                                </h4>
+                                                <p className="text-sm font-black text-gray-700">Требуется <span className="bg-green-200 px-2 py-1 rounded">перед началом работы</span> для всех исполнителей (курьеров, водителей). В Яндекс Про нет установленного срока регистрации.</p>
+                                            </div>
+
+                                            <div className="bg-red-50 p-6 rounded-[24px] border-4 border-red-400">
+                                                <h4 className="font-black uppercase text-red-600 mb-3 text-sm flex items-center gap-2">
+                                                    <Icon name="alert-triangle" size={24}/>
+                                                    Важно
+                                                </h4>
+                                                <p className="text-sm font-black text-gray-700">Отсутствие регистрации в КИС «АРТ» приводит к <span className="text-red-600 underline">блокировке доступа к заказам</span>.</p>
+                                            </div>
+                                        </div>
 
                                         {/* 9. СМЗ И ИП */}
-                                        <div id="smz" className="p-12 bg-white rounded-[60px] shadow-2xl border border-gray-100 font-black italic"><div className="flex items-center gap-6 mb-6 border-b-4 border-yellow-400 pb-4 italic font-black italic font-black"><Icon name="user-check" size={40}/><h3 className="text-3xl uppercase tracking-tighter italic font-black">СМЗ и ИП</h3></div><p className="text-gray-400 italic font-black uppercase text-[10px] tracking-widest italic font-black">Ожидаем информацию...</p></div>
+                                        <div id="smz" className="bg-white p-12 rounded-[60px] shadow-2xl border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-10 border-b-8 border-yellow-400 pb-6">
+                                                <Icon name="user-check" size={60} className="text-black" />
+                                                <h3 className="text-5xl font-black uppercase tracking-tighter">СМЗ и ИП</h3>
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-[32px] border-4 border-green-400 mb-8">
+                                                <div className="flex items-start gap-4 mb-4">
+                                                    <div className="bg-green-600 text-white p-3 rounded-xl"><Icon name="percent" size={32}/></div>
+                                                    <div>
+                                                        <h4 className="text-xl font-black uppercase mb-2">Самозанятость (СМЗ)</h4>
+                                                        <p className="text-sm text-gray-700 leading-relaxed font-black mb-4">
+                                                            Налоговый режим для прямого сотрудничества с сервисом. Налог: <span className="bg-green-200 px-2 py-1 rounded">4%</span> (физлица) или <span className="bg-green-200 px-2 py-1 rounded">6%</span> (юрлица).
+                                                        </p>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">
+                                                                <p className="text-[10px] text-green-600 uppercase mb-1">Лимит дохода</p>
+                                                                <p className="text-sm font-black">До 2,4 млн ₽ в год</p>
+                                                            </div>
+                                                            <div className="bg-white p-4 rounded-xl border-l-4 border-green-500">
+                                                                <p className="text-[10px] text-green-600 uppercase mb-1">Кто может</p>
+                                                                <p className="text-sm font-black">Граждане РФ и ЕАЭС (Казахстан, Беларусь, Армения, Киргизия)</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-blue-50 p-6 rounded-[24px] border-4 border-blue-400 mb-8">
+                                                <h4 className="font-black uppercase text-blue-600 mb-3 text-sm flex items-center gap-2">
+                                                    <Icon name="briefcase" size={24}/>
+                                                    Парковая самозанятость (ПСМЗ)
+                                                </h4>
+                                                <p className="text-sm font-black text-gray-700">Гибкий сценарий через таксопарк. Сочетает преимущества парка и СМЗ.</p>
+                                            </div>
+
+                                            <div className="bg-yellow-50 p-6 rounded-[24px] border-4 border-yellow-400 mb-8">
+                                                <h4 className="font-black uppercase text-yellow-600 mb-3 text-sm flex items-center gap-2">
+                                                    <Icon name="wallet" size={24}/>
+                                                    Автоуплата налогов (СМЗ/ПСМЗ)
+                                                </h4>
+                                                <p className="text-sm font-black text-gray-700">Подключена по умолчанию в Яндекс Про. Сервис автоматически удерживает налог с заказов и бонусов, переводит в налоговую.</p>
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-[32px] border-4 border-purple-400 mb-8">
+                                                <div className="flex items-start gap-4 mb-4">
+                                                    <div className="bg-purple-600 text-white p-3 rounded-xl"><Icon name="file-text" size={32}/></div>
+                                                    <div>
+                                                        <h4 className="text-xl font-black uppercase mb-2">ИП (Индивидуальный предприниматель)</h4>
+                                                        <p className="text-sm text-gray-700 leading-relaxed font-black mb-4">
+                                                            Прямое сотрудничество с сервисом. Выплаты на расчётный счёт ИП (начинается с <span className="bg-white px-2 py-1 rounded">40802...</span>).
+                                                        </p>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div className="bg-white p-4 rounded-xl border-l-4 border-purple-500">
+                                                                <p className="text-[10px] text-purple-600 uppercase mb-1">ОКВЭД</p>
+                                                                <p className="text-sm font-black">49.32 (такси)</p>
+                                                            </div>
+                                                            <div className="bg-white p-4 rounded-xl border-l-4 border-purple-500">
+                                                                <p className="text-[10px] text-purple-600 uppercase mb-1">Патент</p>
+                                                                <p className="text-sm font-black">До 60 млн ₽ в год</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                                <div className="bg-red-50 p-6 rounded-[24px] border-4 border-red-400">
+                                                    <h4 className="font-black uppercase text-red-600 mb-3 text-sm flex items-center gap-2">
+                                                        <Icon name="alert-triangle" size={24}/>
+                                                        Ограничения
+                                                    </h4>
+                                                    <p className="text-sm font-black text-gray-700">Нельзя стать СМЗ, если доход за год > 2,4 млн ₽ или вы госслужащий.</p>
+                                                </div>
+
+                                                <div className="bg-orange-50 p-6 rounded-[24px] border-4 border-orange-400">
+                                                    <h4 className="font-black uppercase text-orange-600 mb-3 text-sm flex items-center gap-2">
+                                                        <Icon name="alert-circle" size={24}/>
+                                                        Экс-сотрудники Яндекса
+                                                    </h4>
+                                                    <p className="text-sm font-black text-gray-700">Нельзя стать СМЗ/ИП, если менее 2 лет назад был трудовой договор с компанией Яндекса.</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-gray-50 p-6 rounded-[24px] border-4 border-gray-300 mb-8">
+                                                <h4 className="font-black uppercase text-gray-600 mb-3 text-sm flex items-center gap-2">
+                                                    <Icon name="trending-down" size={24}/>
+                                                    Штрафы за неподтверждение
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-red-500">
+                                                        <p className="text-sm font-black"><span className="text-red-600">-15 баллов:</span> Не подтверждён тип занятости (диспа такси)</p>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-xl border-l-4 border-orange-500">
+                                                        <p className="text-sm font-black"><span className="text-orange-600">-10 баллов:</span> Не подтверждён тип сотрудничества (Логистический парк)</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-black text-yellow-400 p-6 rounded-[24px] border-4 border-yellow-400">
+                                                <h4 className="font-black uppercase mb-3 text-sm flex items-center gap-2">
+                                                    <Icon name="info" size={24}/>
+                                                    Важно для ИП
+                                                </h4>
+                                                <p className="font-black text-sm mb-2">❌ Автоуплаты для ИП НЕ существует. Налоги оплачиваются самостоятельно через налоговую или банк.</p>
+                                                <p className="font-black text-sm">📄 Подписание закрывающих документов ≠ оплата налогов. Документы подписываются для вывода средств.</p>
+                                            </div>
+                                        </div>
 
                                     </div>
                                 </div>
@@ -456,11 +1704,19 @@
                         </main>
                     )}
 
-                    <footer className="bg-[#1a1a1a] py-32 text-center border-t-8 border-yellow-400 italic font-black font-black italic">
-                        <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-16 mx-auto opacity-20 mb-10 shadow-2xl italic font-black" />
-                        <p className="text-gray-600 text-xs font-black uppercase tracking-[0.8em] italic mb-4 font-black italic font-black">Taxi Svoi Corporate Portal</p>
-                        <p className="text-gray-800 text-[10px] font-black uppercase italic tracking-widest font-black italic font-black italic font-black italic font-black">© 2024 МЫ ВСЕГДА РЯДОМ С ТОБОЙ</p>
+                    <footer className="bg-[#1a1a1a] py-32 text-center border-t-8 border-yellow-400">
+                        <img src="https://taxi-svoi.ru/wp-content/themes/taxi/img/logo.png" alt="СВОИ" className="h-16 mx-auto opacity-20 mb-10 shadow-2xl" />
+                        <p className="text-gray-600 text-xs font-black uppercase tracking-[0.8em] mb-4">Taxi Svoi Corporate Portal</p>
+                        <p className="text-gray-800 text-[10px] uppercase tracking-widest">© 2024 МЫ ВСЕГДА РЯДОМ С ТОБОЙ</p>
                     </footer>
+
+                    <button
+                        onClick={scrollToTop}
+                        className="fixed bottom-8 right-8 bg-black text-yellow-400 p-4 rounded-2xl shadow-2xl border-4 border-yellow-400 hover:scale-110 transition-all z-[1000] group"
+                        title="Наверх"
+                    >
+                        <Icon name="arrow-up" size={32} className="group-hover:-translate-y-1 transition-transform" />
+                    </button>
                 </div>
             );
         }
