@@ -53,6 +53,17 @@
             white-space: nowrap;
             animation: marquee 20s linear infinite;
         }
+
+        /* Модальное окно поиска */
+        .search-modal { 
+            position: fixed; 
+            top: 100px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            z-index: 9999; 
+            width: 90%; 
+            max-width: 600px;
+        }
     </style>
 </head>
 <body>
@@ -121,16 +132,58 @@
             };
 
             const initialState = loadState();
-            
+
             const [view, setView] = useState(initialState.view);
             const [selectedDept, setSelectedDept] = useState(initialState.selectedDept);
             const [pinInput, setPinInput] = useState('');
             const [error, setError] = useState(false);
             const [currentSlide, setCurrentSlide] = useState(initialState.currentSlide);
+            const [searchOpen, setSearchOpen] = useState(false);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [searchResults, setSearchResults] = useState([]);
             const cheatSheetRef = useRef(null);
-            
+
             const presentation = selectedDept ? PRESENTATIONS[selectedDept.id] : null;
             const totalSlides = presentation ? presentation.totalSlides : 9;
+
+            // Горячие клавиши
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Escape' && searchOpen) {
+                        setSearchOpen(false);
+                    }
+                };
+                document.addEventListener('keydown', handleKeyDown);
+                return () => document.removeEventListener('keydown', handleKeyDown);
+            }, [searchOpen]);
+
+            // Поиск по шпаргалке
+            useEffect(() => {
+                if (searchQuery.length < 2) {
+                    setSearchResults([]);
+                    return;
+                }
+                
+                const sections = [
+                    { id: 'commission', name: 'Комиссии парка', keywords: ['комиссия', 'парк', 'такси', 'курьер', 'смз', 'ип', 'процент'] },
+                    { id: 'bonuses', name: 'Бонусы парков', keywords: ['бонус', 'приветственный', 'поездка', 'друг', 'реферал'] },
+                    { id: 'minivan', name: 'Минивэн / Cruise', keywords: ['минивэн', 'cruise', 'премиум', 'мерседес'] },
+                    { id: 'license', name: 'Лицензия / Разрешение', keywords: ['лицензия', 'разрешение', 'фгис', 'перевозчик', 'балл'] },
+                    { id: 'colors', name: 'Цвет авто МСК/МО', keywords: ['цвет', 'жёлтый', 'белый', 'оклейка', 'мск', 'мо'] },
+                    { id: 'contract', name: 'Договор фрахтования', keywords: ['договор', 'фрахт', 'фрахтовщик', 'карточка'] },
+                    { id: 'osago', name: 'ОСАГО/ОСГОП', keywords: ['осаго', 'осгоп', 'страх', 'страховка', 'полис'] },
+                    { id: 'kisart', name: 'КИС АРТ', keywords: ['кис', 'арт', 'регистрация', 'такси', 'медосмотр'] },
+                    { id: 'smz', name: 'СМЗ и ИП', keywords: ['смз', 'самозанят', 'ип', 'налог', 'патент', 'автоуплата'] }
+                ];
+
+                const query = searchQuery.toLowerCase();
+                const results = sections.filter(section => 
+                    section.name.toLowerCase().includes(query) ||
+                    section.keywords.some(keyword => keyword.includes(query))
+                );
+                
+                setSearchResults(results);
+            }, [searchQuery]);
 
             useEffect(() => {
                 localStorage.setItem('staffPortalView', view);
@@ -1112,6 +1165,17 @@
 
                     {view === 'qcontent' && (
                         <main className="animate-in slide-in-from-bottom-10 duration-1000 italic">
+                            {/* Кнопка поиска */}
+                            <div className="fixed top-4 right-4 z-[1000]">
+                                <button
+                                    onClick={() => setSearchOpen(true)}
+                                    className="bg-black text-yellow-400 p-3 rounded-xl shadow-xl border-4 border-yellow-400 hover:scale-110 transition-all group"
+                                    title="Поиск (Ctrl+K)"
+                                >
+                                    <Icon name="search" size={24} className="group-hover:scale-110 transition-transform" />
+                                </button>
+                            </div>
+                            
                             <div className="bg-black text-yellow-400 py-5 text-center sticky top-[95px] z-[90] shadow-2xl font-black text-[11px] uppercase tracking-[0.5em] italic overflow-hidden">
                                 <div className="animate-marquee">ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ • ТЫ В КОМАНДЕ СВОИ</div>
                             </div>
@@ -1172,6 +1236,23 @@
                                                     <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl">
                                                         <h4 className="text-yellow-400 uppercase text-xs mb-2">ПСМЗ и ИП (Курьеры):</h4>
                                                         <p className="text-2xl font-black">1% + 50 ₽/день</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-10 bg-yellow-50 p-8 rounded-[32px] border-4 border-yellow-400">
+                                                <div className="flex items-start gap-4">
+                                                    <div className="bg-yellow-500 text-black p-3 rounded-xl flex-shrink-0">
+                                                        <Icon name="clock" size={28} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-yellow-700 uppercase text-sm font-black mb-3">Важно о ежедневной комиссии</h4>
+                                                        <p className="text-sm font-black text-gray-800 leading-relaxed">
+                                                            Комиссия <span className="bg-yellow-200 px-2 py-1 rounded">60 ₽</span> (парковые) и <span className="bg-yellow-200 px-2 py-1 rounded">50 ₽</span> (ПСМЗ курьеры) списывается <span className="text-red-600 underline">один раз в день</span>. 
+                                                            Новый день начинается после <span className="bg-yellow-200 px-2 py-1 rounded font-black">00:00</span>. 
+                                                            Если водитель вышел на линию в 17:00, поработал, а затем решил выйти в 2:00 ночи — комиссия спишется <span className="text-red-600 underline">ещё раз</span>, 
+                                                            так как после полуночи начинается новый рабочий день.
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1705,6 +1786,55 @@
                                 </div>
                             </div>
                         </main>
+                    )}
+
+                    {/* Модальное окно поиска */}
+                    {searchOpen && (
+                        <div className="search-modal" onClick={() => setSearchOpen(false)}>
+                            <div className="bg-white rounded-3xl shadow-2xl border-4 border-yellow-400 overflow-hidden" onClick={e => e.stopPropagation()}>
+                                <div className="p-4 border-b-4 border-gray-100 flex items-center gap-4">
+                                    <Icon name="search" size={24} className="text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        placeholder="Поиск по шпаргалке..."
+                                        className="flex-1 text-lg font-black outline-none text-black bg-transparent"
+                                        autoFocus
+                                    />
+                                    <button onClick={() => setSearchOpen(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
+                                        <Icon name="x" size={24} className="text-gray-400" />
+                                    </button>
+                                </div>
+                                <div className="max-h-96 overflow-y-auto p-4">
+                                    {searchQuery.length < 2 && (
+                                        <p className="text-gray-400 text-center font-black italic">Введите минимум 2 символа для поиска</p>
+                                    )}
+                                    {searchResults.length === 0 && searchQuery.length >= 2 && (
+                                        <p className="text-gray-400 text-center font-black italic">Ничего не найдено</p>
+                                    )}
+                                    {searchResults.map(result => (
+                                        <button
+                                            key={result.id}
+                                            onClick={() => {
+                                                scrollToSection(result.id);
+                                                setSearchOpen(false);
+                                                setSearchQuery('');
+                                            }}
+                                            className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-gray-100 hover:border-yellow-400 hover:bg-white transition-all text-left mb-2 group"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-black uppercase font-black text-sm">{result.name}</span>
+                                                <Icon name="arrow-right" size={20} className="text-yellow-500 opacity-0 group-hover:opacity-100 transition-all" />
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="p-3 bg-black text-yellow-400 text-center text-[10px] font-black uppercase tracking-widest">
+                                    Нажмите на раздел для перехода
+                                </div>
+                            </div>
+                        </div>
                     )}
 
                     <footer className="bg-[#1a1a1a] py-32 text-center border-t-8 border-yellow-400">
