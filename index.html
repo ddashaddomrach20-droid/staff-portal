@@ -4669,70 +4669,146 @@
                                                 <h3 className="text-5xl font-black uppercase tracking-tighter">Комиссии парка</h3>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                                <div className="space-y-6">
-                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400">
-                                                        <h4 className="text-yellow-600 uppercase text-xs mb-2">Такси (Парковые):</h4>
-                                                        <p className="text-2xl font-black">1.4% + 6 ₽ + 60 ₽/день</p>
-                                                    </div>
-                                                    <div className="bg-gray-50 p-6 rounded-3xl border-l-8 border-yellow-400">
-                                                        <h4 className="text-yellow-600 uppercase text-xs mb-2">Курьеры (Парковые):</h4>
-                                                        <p className="text-2xl font-black">1.4% + 60 ₽/день</p>
-                                                    </div>
+                                            <p className="text-sm text-gray-600 mb-10 leading-relaxed">
+                                                Комиссии парка списываются автоматически и зависят от типа профиля и направления работы. Ниже актуальные варианты и правила списаний.
+                                            </p>
+
+                                            {/* Парковые водители такси */}
+                                            <div className="mb-10 bg-gradient-to-br from-yellow-50 to-amber-50 p-8 rounded-[32px] border-4 border-yellow-400">
+                                                <div className="flex items-center gap-4 mb-6">
+                                                    <div className="bg-yellow-500 text-white p-3 rounded-xl"><Icon name="car" size={28}/></div>
+                                                    <h4 className="text-xl font-black uppercase">Парковые водители такси</h4>
                                                 </div>
-                                                <div className="space-y-6">
-                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl">
-                                                        <h4 className="text-yellow-400 uppercase text-xs mb-2">ПСМЗ и ИП (Такси):</h4>
-                                                        <p className="text-2xl font-black">0% (7 дней) → далее 1%</p>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-yellow-300">
+                                                        <p className="text-[10px] text-yellow-600 uppercase font-black mb-2">Процент с заказа</p>
+                                                        <p className="text-2xl font-black">1,4%</p>
+                                                        <p className="text-xs text-gray-500 mt-1">или 4% с источника ВК СВОИ</p>
+                                                        <p className="text-xs text-red-500 mt-2 font-bold">→ повысится до 5,5%</p>
                                                     </div>
-                                                    <div className="bg-black text-white p-6 rounded-3xl border-l-8 border-yellow-400 shadow-xl">
-                                                        <h4 className="text-yellow-400 uppercase text-xs mb-2">ПСМЗ и ИП (Курьеры):</h4>
-                                                        <p className="text-2xl font-black">1% + 50 ₽/день</p>
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-yellow-300">
+                                                        <p className="text-[10px] text-yellow-600 uppercase font-black mb-2">Фиксированная с заказа</p>
+                                                        <p className="text-2xl font-black">12 ₽</p>
+                                                        <p className="text-xs text-gray-500 mt-1">с каждого заказа, независимо от стоимости</p>
+                                                        <p className="text-xs text-red-500 mt-2 font-bold">→ повысится до 22 ₽</p>
+                                                    </div>
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-yellow-300">
+                                                        <p className="text-[10px] text-yellow-600 uppercase font-black mb-2">Суточная</p>
+                                                        <p className="text-2xl font-black">150 ₽/сут</p>
+                                                        <p className="text-xs text-gray-500 mt-1">первое списание при выходе на линию, далее с первого заказа в сутки</p>
+                                                        <p className="text-xs text-red-500 mt-2 font-bold">→ повысится до 200 ₽/сут</p>
                                                     </div>
                                                 </div>
                                             </div>
 
+                                            {/* Парковые курьеры */}
+                                            <div className="mb-10 bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[32px] border-4 border-blue-400">
+                                                <div className="flex items-center gap-4 mb-6">
+                                                    <div className="bg-blue-500 text-white p-3 rounded-xl"><Icon name="bike" size={28}/></div>
+                                                    <h4 className="text-xl font-black uppercase">Парковые курьеры</h4>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-blue-300">
+                                                        <p className="text-[10px] text-blue-600 uppercase font-black mb-2">Процент с заказа</p>
+                                                        <p className="text-2xl font-black">1,4%</p>
+                                                        <p className="text-xs text-gray-500 mt-1">списание с каждого заказа</p>
+                                                        <p className="text-xs text-red-500 mt-2 font-bold">→ повысится до 6%</p>
+                                                    </div>
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-blue-300">
+                                                        <p className="text-[10px] text-blue-600 uppercase font-black mb-2">Суточная</p>
+                                                        <p className="text-2xl font-black">60 ₽/сут</p>
+                                                        <p className="text-xs text-gray-500 mt-1">первое списание при выходе на линию</p>
+                                                        <p className="text-xs text-red-500 mt-2 font-bold">→ 1,4% → 6% с заказа</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* ПСМЗ Такси */}
+                                            <div className="mb-10 bg-gradient-to-br from-gray-50 to-slate-100 p-8 rounded-[32px] border-4 border-gray-400">
+                                                <div className="flex items-center gap-4 mb-6">
+                                                    <div className="bg-gray-700 text-white p-3 rounded-xl"><Icon name="user-check" size={28}/></div>
+                                                    <h4 className="text-xl font-black uppercase">ПСМЗ — Такси</h4>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-gray-300">
+                                                        <p className="text-[10px] text-gray-600 uppercase font-black mb-2">Льготный период</p>
+                                                        <p className="text-2xl font-black">0% — 7 дней</p>
+                                                        <p className="text-xs text-gray-500 mt-1">далее 1% с заказа</p>
+                                                        <p className="text-xs text-red-500 mt-2 font-bold">или 3% с источника ВК СВОИ</p>
+                                                    </div>
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-gray-300">
+                                                        <p className="text-[10px] text-gray-600 uppercase font-black mb-2">Фиксированная с заказа</p>
+                                                        <p className="text-2xl font-black">10 ₽</p>
+                                                        <p className="text-xs text-red-500 mt-2 font-bold">→ повысится до 14 ₽</p>
+                                                    </div>
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-gray-300">
+                                                        <p className="text-[10px] text-gray-600 uppercase font-black mb-2">Суточная</p>
+                                                        <p className="text-2xl font-black">70 ₽/сут</p>
+                                                        <p className="text-xs text-red-500 mt-2 font-bold">→ повысится до 115 ₽/сут</p>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-4 bg-gray-100 p-4 rounded-xl">
+                                                    <p className="text-xs text-gray-600 font-bold">Итог после повышения: 3% с заказа + 14 ₽/заказ + 115 ₽/сут</p>
+                                                </div>
+                                            </div>
+
+                                            {/* ПСМЗ Курьеры */}
+                                            <div className="mb-10 bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-[32px] border-4 border-green-400">
+                                                <div className="flex items-center gap-4 mb-6">
+                                                    <div className="bg-green-600 text-white p-3 rounded-xl"><Icon name="package" size={28}/></div>
+                                                    <h4 className="text-xl font-black uppercase">ПСМЗ — Курьеры</h4>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-green-300">
+                                                        <p className="text-[10px] text-green-600 uppercase font-black mb-2">Суточная (цепочка повышения)</p>
+                                                        <div className="space-y-1">
+                                                            <p className="text-lg font-black">50 ₽/сут</p>
+                                                            <p className="text-xs text-gray-500">списание при выходе на линию, далее с первого заказа в сутки</p>
+                                                            <p className="text-sm font-bold text-red-500">→ 1,4% с заказа → 3% с заказа</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-white p-5 rounded-2xl border-2 border-green-300">
+                                                        <p className="text-[10px] text-green-600 uppercase font-black mb-2">Процент с заказа</p>
+                                                        <p className="text-2xl font-black">1%</p>
+                                                        <p className="text-xs text-gray-500 mt-1">списание с каждого заказа</p>
+                                                        <p className="text-xs text-red-500 mt-2 font-bold">→ повысится до 3%</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Важно о списаниях */}
                                             <div className="mt-10 bg-yellow-50 p-8 rounded-[32px] border-4 border-yellow-400">
                                                 <div className="flex items-start gap-4">
                                                     <div className="bg-yellow-500 text-black p-3 rounded-xl flex-shrink-0">
                                                         <Icon name="clock" size={28} />
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-yellow-700 uppercase text-sm font-black mb-3">Важно о ежедневной комиссии</h4>
+                                                        <h4 className="text-yellow-700 uppercase text-sm font-black mb-3">⚠️ Важно о суточных списаниях</h4>
                                                         <p className="text-sm font-black text-gray-800 leading-relaxed">
-                                                            Комиссия <span className="bg-yellow-200 px-2 py-1 rounded">60 ₽</span> (парковые) и <span className="bg-yellow-200 px-2 py-1 rounded">50 ₽</span> (ПСМЗ курьеры) списывается <span className="text-red-600 underline">один раз в день</span>. 
-                                                            Новый день начинается после <span className="bg-yellow-200 px-2 py-1 rounded font-black">00:00</span>. 
-                                                            Если водитель вышел на линию в 17:00, поработал, а затем решил выйти в 2:00 ночи — комиссия спишется <span className="text-red-600 underline">ещё раз</span>, 
+                                                            Первое списание происходит <span className="text-red-600 underline">при выходе на линию</span>.
+                                                            Далее списание происходит с <span className="bg-yellow-200 px-2 py-1 rounded font-black">первого заказа в сутки</span>.
+                                                            Новый день начинается после <span className="bg-yellow-200 px-2 py-1 rounded font-black">00:00</span>.
+                                                            Если водитель вышел на линию в 17:00, поработал, а затем решил выйти в 2:00 ночи — комиссия спишется <span className="text-red-600 underline">ещё раз</span>,
                                                             так как после полуночи начинается новый рабочий день.
                                                         </p>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="mt-12 bg-red-50 p-10 rounded-[40px] border-4 border-red-500 shadow-2xl">
-                                                <h4 className="text-red-600 text-3xl mb-8 uppercase tracking-tighter underline decoration-red-200">Повышение комиссии</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-black">
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] text-red-400 uppercase">Парковые водители:</p>
-                                                        <p className="text-sm font-black">1.4% <span className="text-red-500">→</span> 5.5%</p>
-                                                        <p className="text-sm font-black">6 ₽ <span className="text-red-500">→</span> 10 ₽</p>
-                                                        <p className="text-sm font-black">60/сут <span className="text-red-500">→</span> 150/сут</p>
+                                            {/* Комиссия с бонусов */}
+                                            <div className="mt-8 bg-orange-50 p-6 rounded-[24px] border-4 border-orange-400">
+                                                <div className="flex items-start gap-4">
+                                                    <div className="bg-orange-500 text-white p-3 rounded-xl flex-shrink-0">
+                                                        <Icon name="alert-triangle" size={24} />
                                                     </div>
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] text-red-400 uppercase">Парковые курьеры:</p>
-                                                        <p className="text-sm font-black">1.4% <span className="text-red-500">→</span> 6%</p>
-                                                        <p className="text-sm font-black">60/сут <span className="text-red-500">→</span> 1.4% <span className="text-red-500">→</span> 6%</p>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] text-red-400 uppercase">ПСМЗ:</p>
-                                                        <p className="text-sm font-black">Водители: 1% <span className="text-red-500">→</span> 3%</p>
-                                                        <p className="text-sm font-black">Курьеры: 50 ₽/сут <span className="text-red-500">→</span> 1.4% <span className="text-red-500">→</span> 3%</p>
+                                                    <div>
+                                                        <h4 className="text-orange-700 uppercase text-sm font-black mb-2">Комиссия с бонусов</h4>
+                                                        <p className="text-sm font-black text-gray-800 leading-relaxed">
+                                                            С бонусов также списывается комиссия, которая со временем немного повышается.
+                                                            <span className="text-red-600 underline"> Если водитель спрашивает про комиссию с бонусов при подключении к парку — эту информацию не сообщаем.</span>
+                                                        </p>
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            <div className="mt-10 bg-black text-yellow-400 p-6 rounded-[30px] text-center uppercase tracking-widest text-[10px] border-b-8 border-yellow-600">
-                                                Тариф 50 ₽/сутки доступен только КУРЬЕРАМ на ПСМЗ. <br/>Для водителей ТАКСИ на ПСМЗ такой тариф не предусмотрен.
                                             </div>
                                         </div>
 
